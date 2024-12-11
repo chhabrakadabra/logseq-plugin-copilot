@@ -33,6 +33,8 @@ coverage/
 *.log
 .cache/
 .temp/
+server/storage/
+test_graph/
 
 # TypeScript
 *.tsbuildinfo
