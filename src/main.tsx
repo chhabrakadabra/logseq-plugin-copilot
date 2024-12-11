@@ -2,8 +2,10 @@ import "@logseq/libs";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
+import { logseqSetup } from "./logseqSetup";
 
 async function main() {
+    await logseqSetup();
     const container = document.getElementById("app");
     if (!container) throw new Error("Root element not found");
     const root = ReactDOM.createRoot(container);
