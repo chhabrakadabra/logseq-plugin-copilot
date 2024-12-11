@@ -1,0 +1,28 @@
+{
+  "name": "logseq-plugin-copilot",
+  "author": "Abhin Chhabra",
+  "private": true,
+  "main": "dist/index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "logseq": {
+    "name": "logseq-plugin-copilot",
+    "id": "_8hs96bamw"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.1",
+    "@types/react-dom": "^19.0.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3",
+    "vite-plugin-logseq": "^1.1.2"
+  },
+  "dependencies": {
+    "@logseq/libs": "^0.0.17",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  }
+}
