@@ -5,16 +5,13 @@ import {
   VectorStoreIndex,
   Settings,
   HuggingFaceEmbedding,
-  OpenAI,
   storageContextFromDefaults
 } from "llamaindex";
-import { Page, Block } from "../types";
+import { Page, Block, RetrievedBlock } from "../types";
 
 Settings.embedModel = new HuggingFaceEmbedding({
     modelType: "BAAI/bge-small-en-v1.5",
   });
-
-Settings.llm = new OpenAI({});
 
 async function getVectorStore(): Promise<VectorStoreIndex> {
   // TODO: Make this a singleton
@@ -47,22 +44,15 @@ export async function deleteDocument(uuid: string, index: VectorStoreIndex): Pro
   }
 }
 
-export async function queryStore(query: string, index: VectorStoreIndex): Promise<string> {
-    const queryEngine = index.asQueryEngine({similarityTopK: 10});
-    const { message, sourceNodes } = await queryEngine.query({
-        query,
-    });
-
-    console.log(message);
-    if (sourceNodes) {
-      sourceNodes.forEach((source: NodeWithScore, index: number) => {
-        console.log(
-          `\n${index}: Score: ${source.score} - ${source.node.getContent(MetadataMode.NONE).substring(0, 50)}...\n`,
-        );
-      });
-    }
-
-    return message.content.toString();
+export async function queryStore(query: string, index: VectorStoreIndex): Promise<RetrievedBlock[]> {
+  const retriever = index.asRetriever();
+  const results = await retriever.retrieve(query);
+  return results.sort((a, b) => (b.score || 0) - (a.score || 0)).map(result => ({
+    uuid: result.node.id_,
+    content: result.node.getContent(MetadataMode.NONE).toString(),
+    similarityScore: result.score,
+    pageName: result.node.metadata?.pageName,
+  }));
 }
 
 export { getVectorStore };
