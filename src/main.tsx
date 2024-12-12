@@ -1,8 +1,9 @@
+import "./ui/style.css";
 import "@logseq/libs";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { App } from "./App";
-import { logseqSetup } from "./logseqSetup";
+import { App } from "./ui/App";
+import { logseqSetup } from "./lib/logseq";
 
 async function main() {
     await logseqSetup();
