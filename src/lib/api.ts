@@ -1,9 +1,6 @@
 import { BlockEntity, PageEntity } from "@logseq/libs/dist/LSPlugin";
-import { Page, Block } from "../types";
+import { Page, Block } from "../../types";
 
-async function updateBlockIndex() {
-    
-}
 
 export async function indexPage(pageEntity: PageEntity, blocksEntities: BlockEntity[]): Promise<void> {
     const page: Page = {
@@ -32,13 +29,14 @@ export async function indexPage(pageEntity: PageEntity, blocksEntities: BlockEnt
 }
 
 export async function queryStore(query: string) {
-    const response = await fetch("http://localhost:8000/query", {
+    const response = await fetch("http://localhost:8000/query?" + new URLSearchParams({ query }), {
         method: "GET",
         headers: {
             'Content-Type': 'application/json'
-        },
-        body: new URLSearchParams({ query })
+        }
     });
-    alert(response.json());
-    return response.json();
+    if (!response.ok) {
+        throw new Error("Failed to query store");
+    }
+    return await response.json();
 }

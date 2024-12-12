@@ -25,8 +25,8 @@ async function main() {
     app.get("/query", async (req: Request, res: Response) => {
         const query: string = req.query.query as string;
         console.log("query", query);
-        const response = await queryStore(query, vectorStore);
-        res.send(response);
+        const message = await queryStore(query, vectorStore);
+        res.send({ message });
     });
 
     app.listen(8000, () => {
