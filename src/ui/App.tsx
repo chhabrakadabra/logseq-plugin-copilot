@@ -70,6 +70,7 @@ export const App: React.FC = () => {
                         className={`p-5 ${isProcessing ? "text-gray-400" : "text-white"} placeholder-gray-200 w-full bg-transparent border-0 outline-none`}
                         placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
+                        id="logseq-copilot-search"
                         onChange={(e) => {
                             setQuery(e.target.value);
                         }}
