@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import "@logseq/libs";
 import { Dialog, DialogPanel, Input } from '@headlessui/react';
 import { RagEngine } from '../lib/rag';
@@ -6,9 +6,9 @@ import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 export const App: React.FC = () => {
-    const [query, setQuery] = React.useState("");
-    const [results, setResults] = React.useState("");
-    const [isProcessing, setIsProcessing] = React.useState(false);
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState("");
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const ragEngine = new RagEngine();
 
