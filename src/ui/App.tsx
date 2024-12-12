@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import "@logseq/libs";
-import { Dialog, DialogPanel, Input } from '@headlessui/react';
+import { Dialog, DialogBackdrop, DialogPanel, Input } from '@headlessui/react';
 import { RagEngine } from '../lib/rag';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -9,6 +9,7 @@ export const App: React.FC = () => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
+    const [theme, setTheme] = useState({color: "white", "background-color": "slate", "border-color": "slate"});
 
     const ragEngine = new RagEngine();
 
@@ -59,15 +60,23 @@ export const App: React.FC = () => {
         }
     }
 
+    useEffect(() => {
+        logseq.UI.resolveThemeCssPropsVals(["color", "background-color", "border-color"]).then((newTheme) => {
+            setTheme({...theme, ...newTheme});
+        });
+    }, []);
+
     return (
-        <Dialog
-            open={true}
-            onClose={onClose}
-            className="fixed top-1/4 inset-0 z-50 overflow-y-auto">
-            <DialogPanel className="bg-slate-700 max-w-2xl mx-auto rounded-lg shadow-2xl relative flex flex-col p-4">
+            <Dialog
+                open={true}
+                onClose={onClose}
+                className="fixed top-1/4 inset-0 z-50 overflow-y-auto">
+                <DialogBackdrop className="fixed inset-0 bg-opacity-50 backdrop-filter backdrop-blur-sm" />
+                <DialogPanel style={{ backgroundColor: theme["background-color"], borderColor: theme["border-color"], borderWidth: 1, borderStyle: "solid" }} className="max-w-2xl mx-auto rounded-lg shadow-2xl relative flex flex-col p-4">
                 <form onSubmit={onSubmit}>
                     <Input
-                        className={`p-5 ${isProcessing ? "text-gray-400" : "text-white"} placeholder-gray-200 w-full bg-transparent border-0 outline-none`}
+                        style={{ color: isProcessing ? theme.color : "gray" }}
+                        className="p-5 placeholder-gray-200 w-full bg-transparent border-0 outline-none"
                         placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
                         id="logseq-copilot-search"
@@ -82,7 +91,7 @@ export const App: React.FC = () => {
                 {results && (
                     <>
                         <hr className="border-gray-600 ml-5 mr-5" />
-                        <div className="p-5 text-white" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
+                        <div style={{ color: theme.color }} className="p-5 text-white" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
                     </>
                 )}
             </DialogPanel>
