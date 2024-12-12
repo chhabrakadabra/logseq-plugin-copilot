@@ -4,7 +4,7 @@ import "@logseq/libs";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import dedent from "dedent-js";
 import { Runnable } from "@langchain/core/runnables";
-import { queryStore } from "./indexing";
+import { queryStore } from "./api";
 
 export class RagEngine {
     qaChain: Runnable;

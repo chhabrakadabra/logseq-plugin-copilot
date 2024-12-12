@@ -1,6 +1,6 @@
 import "@logseq/libs";
 import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin.user";
-import { indexPage } from "./indexing";
+import { indexPage } from "./api";
 import Semaphore from "semaphore-promise";
 
 export const settingsSchema: SettingSchemaDesc[] = [
