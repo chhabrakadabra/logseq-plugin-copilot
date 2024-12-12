@@ -1,27 +1,35 @@
 import {
   Document,
   MetadataMode,
-  NodeWithScore,
   VectorStoreIndex,
   Settings,
   HuggingFaceEmbedding,
-  storageContextFromDefaults
+  storageContextFromDefaults,
 } from "llamaindex";
 import { Page, Block, RetrievedBlock } from "../types";
+import fs from "fs";
 
 Settings.embedModel = new HuggingFaceEmbedding({
     modelType: "BAAI/bge-small-en-v1.5",
   });
 
+const storageDir = "./server/storage";
+
 async function getVectorStore(): Promise<VectorStoreIndex> {
   // TODO: Make this a singleton
     const storageContext = await storageContextFromDefaults({
-        persistDir: "./server/storage",
+        persistDir: storageDir,
     });
 
     return VectorStoreIndex.fromDocuments([], {
         storageContext,
     });
+}
+
+export async function resetIndex(): Promise<VectorStoreIndex> {
+  fs.rmSync(storageDir, { recursive: true, force: true });
+
+  return await getVectorStore();
 }
 
 export function createDocument(page: Page, block: Block): Document {
@@ -40,7 +48,7 @@ export async function deleteDocument(uuid: string, index: VectorStoreIndex): Pro
   try {
     await index.deleteRefDoc(uuid, true);
   } catch (e) {
-    console.log(e);
+    console.log("Tried to delete document", uuid, "but failed");
   }
 }
 

@@ -1,23 +1,31 @@
 import express, { Express, Request, Response } from "express";
-import { getVectorStore, queryStore, createDocument, deleteDocument } from "./rag";
+import { getVectorStore, queryStore, createDocument, deleteDocument, resetIndex } from "./rag";
 import { Page, Block } from "../types";
-
 
 const app: Express = express();
 
 async function main() {
 
-    const vectorStore = await getVectorStore();
+    let vectorStore = await getVectorStore();
 
     app.use(express.json());
+
+    app.post("/resetIndex", async (req: Request, res: Response) => {
+        vectorStore = await resetIndex();
+        res.send({ "status": "success" });
+    });
 
     app.post("/indexPage", async (req: Request, res: Response) => {
         const { page, blocks }: { page: Page, blocks: Block[] } = req.body;
 
         console.log(page, blocks);
         for (const block of blocks) {
+            // Delete blocks before either saving or updating
             await deleteDocument(block.uuid, vectorStore);
-            vectorStore.insert(createDocument(page, block));
+            // No need to index empty blocks
+            if (block.content) {
+                vectorStore.insert(createDocument(page, block));
+            }
         }
         res.send({ "status": "success" });
     });
