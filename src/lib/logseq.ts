@@ -73,8 +73,8 @@ export async function logseqSetup() {
             return;
         }
 
-        // Temp: Only index 100 pages
-        pages = pages.slice(0, 100);
+        // Temp: Only index 500 pages
+        pages = pages.slice(0, 500);
 
         const errors = [];
         await Promise.all(pages.map(async (page) => {
