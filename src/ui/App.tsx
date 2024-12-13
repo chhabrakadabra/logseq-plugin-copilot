@@ -23,7 +23,7 @@ export const App: React.FC = () => {
         setResults("");
     }
 
-    const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (query.trim() === "") {
             const currentBlock = await logseq.Editor.getCurrentBlock();
@@ -40,7 +40,7 @@ export const App: React.FC = () => {
             setResults(prevResults => prevResults + chunk);
         });
         setIsProcessing(false);
-    }
+    }, [query]);
 
     const parseIncompleteMarkdown = (markdown: string) => {
         /**
@@ -126,7 +126,7 @@ export const App: React.FC = () => {
                 <DialogPanel style={{ backgroundColor: theme["background-color"], borderColor: theme["border-color"], borderWidth: 1, borderStyle: "solid" }} className="max-w-2xl mx-auto rounded-lg shadow-2xl relative flex flex-col p-4">
                 <form onSubmit={onSubmit}>
                     <Input
-                        style={{ color: isProcessing ? theme.color : "gray" }}
+                        style={{ color: isProcessing ? "gray" : theme.color }}
                         className="p-2 placeholder-gray-200 dark:placeholder-gray-500 w-full bg-transparent border-0 outline-none"
                         placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
@@ -141,8 +141,8 @@ export const App: React.FC = () => {
 
                 {results && (
                     <>
-                        <hr className="border-gray-600 ml-5 mr-5" />
-                        <div style={{ color: theme.color }} className="p-5 text-white" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
+                        <hr className="border-gray-600 mx-2" />
+                        <div style={{ color: theme.color }} className="p-2" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
                         <div className="flex justify-between">
                             <div>
                             <Button className={buttonStyle+"text-slate-700 dark:text-white bg-red-200 dark:bg-red-500"} onClick={onClose}>Close <span className="text-xs ml-0.5"><kbd>Esc</kbd></span></Button>
