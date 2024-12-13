@@ -40,7 +40,13 @@ export class RagEngine {
             ["human", "{query}"],
         ]);
         const qaTemplate = ChatPromptTemplate.fromMessages([
-            ["system", "You are a helpful assistant that can answer questions about the user's notes. The user's notes are: \n{retrievedContext}"],
+            ["system", dedent`
+                You are a helpful assistant that can answer questions about the user's notes.
+                You may use markdown to format your response.
+
+                The user's notes are:
+                {retrievedContext}
+            `],
             ["human", "{query}"],
         ]);
         const outputParser = new StringOutputParser();
