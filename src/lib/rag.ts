@@ -5,6 +5,7 @@ import { StringOutputParser } from "@langchain/core/output_parsers";
 import dedent from "dedent-js";
 import { Runnable } from "@langchain/core/runnables";
 import { queryStore } from "./api";
+import { RetrievedBlock } from "../../types";
 
 export class RagEngine {
     qaChain: Runnable;
@@ -43,14 +44,44 @@ export class RagEngine {
         this.qaChain = qaTemplate.pipe(model).pipe(outputParser);
     }
 
+    async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
+        const logseqQuery = await this.queryEnhancerChain.invoke({ query });
+        const results = await logseq.DB.q(logseqQuery);
+        console.log(results);
+        return (results || []).slice(0, 50).map(result => ({
+            uuid: result.uuid,
+            content: result.content,
+            pageName: result.page.name
+        }))
+    }
+
+    async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
+        const response = await queryStore(query);
+        const blocks = response.blocks;
+        console.log(blocks);
+        return blocks;
+    }
+
     async run(query: string) {
-        // const logseqQuery = await this.queryEnhancerChain.invoke({ query });
-        // console.log(`logseqQuery: ${logseqQuery}`);
-        // const results = await logseq.DB.q(logseqQuery);
-        // console.log(results);
-        // const retrievedContext = results?.slice(0, 50).map(result => result.content.slice(0, 3000)).join("\n");
-        // console.log(retrievedContext);
-        // return this.qaChain.invoke({ query, retrievedContext });
-        return (await queryStore(query)).message;
+        const [logseqBlocks, vectorStoreBlocks] = await Promise.all([
+            this.retrieveLogseqBlocks(query),
+            this.retrieveVectorStoreBlocks(query),
+        ]);
+        const blocks = [...logseqBlocks, ...vectorStoreBlocks];
+        const blocksContext = blocks.map(block => dedent`
+            <block>
+                <title>${block.pageName}</title>
+                <content>
+                ${block.content.slice(0, 1000)}
+                </content>
+            </block>
+        `).join("\n");
+        const retrievedContext = dedent`
+            <userNotes>
+                ${blocksContext}
+            </userNotes>
+        `;
+        console.log(retrievedContext);
+        return this.qaChain.invoke({ query, retrievedContext });
     }
 }

@@ -9,4 +9,10 @@ interface Block {
     content: string;
 }
 
-export type { Page, Block };
+interface RetrievedBlock extends Block {
+    similarityScore?: number;
+    pageName?: string;
+}
+
+
+export type { Page, Block, RetrievedBlock };
