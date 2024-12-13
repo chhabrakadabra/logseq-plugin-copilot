@@ -1,11 +1,15 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import "@logseq/libs";
-import { Dialog, DialogBackdrop, DialogPanel, Input } from '@headlessui/react';
+import { Dialog, DialogBackdrop, DialogPanel, Input, Button } from '@headlessui/react';
 import { RagEngine } from '../lib/rag';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
 export const App: React.FC = () => {
+    const isMac = navigator.userAgent.toUpperCase().indexOf('MAC') >= 0;
+
+    const metaKey = isMac ? "⌘" : "Ctrl";
+
     const [query, setQuery] = useState("");
     const [results, setResults] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
@@ -60,11 +64,58 @@ export const App: React.FC = () => {
         }
     }
 
+    const replace = useCallback(async () => {
+        if (!results) return;
+        const blockEntity = await logseq.Editor.getCurrentBlock()
+        if (blockEntity) {
+            await logseq.Editor.updateBlock(blockEntity.uuid, results);
+            onClose();
+        } else {
+            logseq.UI.showMsg("Copilot: No block selected", "warning");
+        }
+    }, [results]);
+
+    const insert = useCallback(async () => {
+        if (!results) return;
+        const blockEntity = await logseq.Editor.getCurrentBlock()
+        if (blockEntity) {
+            await logseq.Editor.insertBlock(blockEntity.uuid, results, {
+                before: false,
+                sibling: false
+            });
+            onClose();
+        } else {
+            logseq.UI.showMsg("Copilot: No block selected", "warning");
+        }
+    }, [results])
+
+    useEffect(() => {    
+        const handleKeyDown = (event: KeyboardEvent) => {
+          if ((isMac && event.metaKey && event.key === "Enter") ||
+              (!isMac && event.ctrlKey && event.key === "Enter")) {
+            insert();
+          }
+        };
+    
+        document.addEventListener('keydown', handleKeyDown);
+    
+        return () => {
+          document.removeEventListener('keydown', handleKeyDown);
+        };
+      }, [isMac, insert]);
+
+    const updateTheme = async () => {
+        const newTheme = await logseq.UI.resolveThemeCssPropsVals(["color", "background-color", "border-color"]);
+        setTheme({...theme, ...newTheme});
+    }
+
+    logseq.App.onThemeModeChanged(updateTheme);
+    logseq.App.onThemeChanged(updateTheme);
     useEffect(() => {
-        logseq.UI.resolveThemeCssPropsVals(["color", "background-color", "border-color"]).then((newTheme) => {
-            setTheme({...theme, ...newTheme});
-        });
+        updateTheme();
     }, []);
+
+    const buttonStyle = "font-medium rounded-lg text-sm p-2.5 text-center "
 
     return (
             <Dialog
@@ -76,7 +127,7 @@ export const App: React.FC = () => {
                 <form onSubmit={onSubmit}>
                     <Input
                         style={{ color: isProcessing ? theme.color : "gray" }}
-                        className="p-5 placeholder-gray-200 w-full bg-transparent border-0 outline-none"
+                        className="p-2 placeholder-gray-200 dark:placeholder-gray-500 w-full bg-transparent border-0 outline-none"
                         placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
                         id="logseq-copilot-search"
@@ -92,6 +143,15 @@ export const App: React.FC = () => {
                     <>
                         <hr className="border-gray-600 ml-5 mr-5" />
                         <div style={{ color: theme.color }} className="p-5 text-white" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
+                        <div className="flex justify-between">
+                            <div>
+                            <Button className={buttonStyle+"text-slate-700 dark:text-white bg-red-200 dark:bg-red-500"} onClick={onClose}>Close <span className="text-xs ml-0.5"><kbd>Esc</kbd></span></Button>
+                            </div>
+                            <div>
+                                <Button className={buttonStyle+"text-white bg-gray-400 dark:bg-gray-500 mx-1"} onClick={replace}>Replace</Button>
+                                <Button className={buttonStyle+"text-white bg-blue-400 dark:bg-blue-500 ml-1"} onClick={insert}>Insert <span className="text-xs ml-0.5">(<kbd>{metaKey}</kbd>+<kbd>Enter</kbd>)</span></Button>
+                            </div>
+                        </div>
                     </>
                 )}
             </DialogPanel>
