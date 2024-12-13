@@ -1,6 +1,6 @@
 import "@logseq/libs";
-import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin.user";
-import { indexPage } from "./api";
+import { BlockEntity, SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
+import { clearIndex, indexPage, queryStore } from "./api";
 import Semaphore from "semaphore-promise";
 
 export const settingsSchema: SettingSchemaDesc[] = [
@@ -54,6 +54,15 @@ export async function logseqSetup() {
         keybinding: { binding: "mod+0" }
     }, async () => {
         const reindexingMsg = await logseq.UI.showMsg("Copilot: Reindexing...");
+
+        try {
+            await clearIndex();
+        } catch (e) {
+            logseq.UI.closeMsg(reindexingMsg);
+            logseq.UI.showMsg("Copilot: Failed to clear index", "error");
+            return;
+        }
+
         const semaphore = new Semaphore(5);
 
         let pages = await logseq.Editor.getAllPages();
@@ -72,7 +81,7 @@ export async function logseqSetup() {
             try {
                 const pageBlocks = await logseq.Editor.getPageBlocksTree(page.uuid);
                 await semaphore.acquire().then(async (release) => {
-                    await indexPage(page, pageBlocks);
+                    await indexPage(page, pageBlocks.filter((block) => block.content.length > 0));
                     release();
                 })
             } catch (e) {
@@ -88,6 +97,31 @@ export async function logseqSetup() {
 
         logseq.UI.closeMsg(reindexingMsg);
         logseq.UI.showMsg("Copilot: Done indexing " + pages.length + " pages", "success");
+    });
+
+    // Hook for updating blocks
+    logseq.DB.onChanged(async ({blocks, txMeta}) => {
+        // This hook is file level. We want only blocks, which have content. If content is empty,
+        // it's likely to be deleted, which we still need to index.
+        blocks = blocks.filter((block) => ["content", "page", "uuid"].reduce((acc, p) => acc && block.hasOwnProperty(p), true));
+        if (blocks.length === 0) return;
+
+        const pageBlocks: { [key: number]: [BlockEntity] } = {};
+        if (txMeta?.outlinerOp === "delete-blocks") {
+            blocks.forEach((block) => block.content = "");
+        }
+
+        blocks.forEach((block) => pageBlocks[block.page.id]?.push(block) || (pageBlocks[block.page.id] = [block]));
+        const pages = await Promise.all(Object.keys(pageBlocks).map((pageId) => logseq.Editor.getPage(Number(pageId))));
+        console.log("Blocks updated",pageBlocks);
+        console.log("Pages",pages);
+
+        try {
+            await Promise.all(pages.filter(page => !!page).map(page => indexPage(page, pageBlocks[page.id])));
+        } catch (e) {
+            console.error(e);
+            logseq.UI.showMsg("Copilot: Failed to update index.\nMaybe try to reindex.", "error");
+        }
     });
 
     logseq.setMainUIInlineStyle({ zIndex: 100 });
