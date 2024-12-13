@@ -52,8 +52,8 @@ export async function deleteDocument(uuid: string, index: VectorStoreIndex): Pro
   }
 }
 
-export async function queryStore(query: string, index: VectorStoreIndex): Promise<RetrievedBlock[]> {
-  const retriever = index.asRetriever({similarityTopK: 10});
+export async function queryStore(query: string, topK: number, index: VectorStoreIndex): Promise<RetrievedBlock[]> {
+  const retriever = index.asRetriever({similarityTopK: topK});
   const results = await retriever.retrieve(query);
   return results.sort((a, b) => (b.score || 0) - (a.score || 0)).map(result => ({
     uuid: result.node.id_,

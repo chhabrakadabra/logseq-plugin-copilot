@@ -74,7 +74,7 @@ export class RagEngine {
     }
 
     async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
-        const response = await queryStore(query);
+        const response = await queryStore(query, logseq.settings!["VECTOR_SIMILARITY_TOP_K"] as number);
         const blocks = response.blocks;
         return blocks;
     }

@@ -32,8 +32,11 @@ async function main() {
 
     app.get("/query", async (req: Request, res: Response) => {
         const query: string = req.query.query as string;
-        console.log("query", query);
-        const blocks = await queryStore(query, vectorStore);
+        const topK: number = parseInt((req.query.topK || "10") as string, 10);
+
+        console.log({query, topK});
+
+        const blocks = await queryStore(query, topK, vectorStore);
         res.send({ blocks });
     });
 

@@ -40,8 +40,8 @@ export async function indexPage(pageEntity: PageEntity, blocksEntities: BlockEnt
     }
 }
 
-export async function queryStore(query: string) {
-    const response = await fetch("http://localhost:8000/query?" + new URLSearchParams({ query }), {
+export async function queryStore(query: string, topK: number) {
+    const response = await fetch("http://localhost:8000/query?" + new URLSearchParams({ query, topK: topK.toString() }), {
         method: "GET",
         headers: {
             'Content-Type': 'application/json'
