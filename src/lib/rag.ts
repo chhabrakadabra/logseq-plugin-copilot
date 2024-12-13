@@ -57,7 +57,15 @@ export class RagEngine {
     async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
         // Note that the query enhancer may return a query wrapped in backticks.
         const logseqQuery = (await this.queryEnhancerChain.invoke({ query })).replace(/^`|`$/g, '');
-        const results = await logseq.DB.q(logseqQuery);
+        let results: any[] | null = null;
+        try {
+            results = await logseq.DB.q(logseqQuery);
+        } catch (e) {
+            console.error("Error querying Logseq with enhanced query. Falling back.", e);
+            const simpleQueryParts = query.replace(/[^a-zA-Z0-9\-]/g, '').split(" ");
+            const simpleQuery = `(and ${simpleQueryParts.map(word => `"${word}"`).join(" ")})`;
+            results = await logseq.DB.q(simpleQuery);
+        }
         return (results || []).slice(0, 50).map(result => ({
             uuid: result.uuid,
             content: result.content,
