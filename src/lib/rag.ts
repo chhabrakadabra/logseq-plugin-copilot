@@ -72,11 +72,21 @@ export class RagEngine {
     }
 
     async run(query: string, onChunkReceived: (token: string) => void) {
-        const [logseqBlocks, vectorStoreBlocks] = await Promise.all([
-            this.retrieveLogseqBlocks(query),
-            this.retrieveVectorStoreBlocks(query),
-        ]);
-        const blocks = [...logseqBlocks, ...vectorStoreBlocks];
+        const searchHeadSetting = logseq.settings!["SEARCH_HEADS"] as string[];
+        if (searchHeadSetting.length === 0) {
+            logseq.UI.showMsg("Copilot: Please select at least one search head type in settings", "error");
+            return;
+        }
+        const searchHeads = [];
+
+        if (searchHeadSetting.includes("logseq")) {
+            searchHeads.push(this.retrieveLogseqBlocks(query));
+        }
+        if (searchHeadSetting.includes("vector")) {
+            searchHeads.push(this.retrieveVectorStoreBlocks(query));
+        }
+
+        const blocks = (await Promise.all(searchHeads)).flat();
         const blocksContext = blocks.map(block => dedent`
             <block>
                 <title>${block.pageName}</title>
