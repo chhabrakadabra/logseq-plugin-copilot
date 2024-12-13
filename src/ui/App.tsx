@@ -142,7 +142,7 @@ export const App: React.FC = () => {
                 {results && (
                     <>
                         <hr className="border-gray-600 mx-2" />
-                        <div style={{ color: theme.color }} className="p-2" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
+                        <div style={{ color: theme.color }} id="markdown-body" className="p-2" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
                         <div className="flex justify-between">
                             <div>
                             <Button className={buttonStyle+"text-slate-700 dark:text-white bg-red-200 dark:bg-red-500"} onClick={onClose}>Close <span className="text-xs ml-0.5"><kbd>Esc</kbd></span></Button>
