@@ -2,6 +2,8 @@ import React from 'react';
 import "@logseq/libs";
 import { Dialog, DialogPanel, Input } from '@headlessui/react';
 import { RagEngine } from '../lib/rag';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 
 export const App: React.FC = () => {
     const [query, setQuery] = React.useState("");
@@ -26,6 +28,28 @@ export const App: React.FC = () => {
         setIsProcessing(false);
     }
 
+    const parseIncompleteMarkdown = (markdown: string) => {
+        /**
+         * Parses markdown text that may be incomplete (e.g. still streaming) into HTML
+         * This method assumes that all but the last line of the markdown text is complete.
+         * @param markdown The potentially incomplete markdown text to parse
+         * @returns The markdown converted to basic HTML with line breaks
+         */
+        try {
+            return DOMPurify.sanitize(marked.parse(markdown) as string);
+        } catch (e) {
+            // Try parsing all but the last line
+            const lines = markdown.split("\n");
+            const lastLine = lines.pop();
+            try {
+                const parsedLines = DOMPurify.sanitize(marked.parse(lines.join("\n")) as string);
+                return parsedLines + "<br />" + lastLine;
+            } catch (e) {
+                return markdown;
+            }
+        }
+    }
+
     return (
         <Dialog
             open={true}
@@ -48,9 +72,7 @@ export const App: React.FC = () => {
                 {results && (
                     <>
                         <hr className="border-gray-600 ml-5 mr-5" />
-                        <p className="p-5 text-white">
-                            {results}
-                        </p>
+                        <div className="p-5 text-white" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
                     </>
                 )}
             </DialogPanel>
