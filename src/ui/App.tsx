@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import "@logseq/libs";
-import { Dialog, DialogBackdrop, DialogPanel, Input, Button } from '@headlessui/react';
+import { Dialog, DialogBackdrop, DialogPanel, Button, Textarea } from '@headlessui/react';
 import { RagEngine } from '../lib/rag';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -14,6 +14,7 @@ export const App: React.FC = () => {
     const [results, setResults] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [theme, setTheme] = useState({color: "white", "background-color": "slate", "border-color": "slate"});
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const ragEngine = new RagEngine();
 
@@ -22,6 +23,13 @@ export const App: React.FC = () => {
         setQuery("");
         setResults("");
     }
+
+    useEffect(() => {
+        const target = inputRef.current;
+        if (!target) return;
+        target.style.height = "";
+        target.style.height = target.scrollHeight + "px";
+    }, [query]);
 
     const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -125,12 +133,21 @@ export const App: React.FC = () => {
                 <DialogBackdrop className="fixed inset-0 bg-opacity-50 backdrop-filter backdrop-blur-sm" />
                 <DialogPanel style={{ backgroundColor: theme["background-color"], borderColor: theme["border-color"], borderWidth: 1, borderStyle: "solid" }} className="max-w-2xl mx-auto rounded-lg shadow-2xl relative flex flex-col p-4">
                 <form onSubmit={onSubmit}>
-                    <Input
-                        style={{ color: isProcessing ? "gray" : theme.color }}
-                        className="p-2 placeholder-gray-200 dark:placeholder-gray-500 w-full bg-transparent border-0 outline-none"
+                    <Textarea
+                        style={{color: isProcessing ? "gray" : theme.color}}
+                        className="p-2 placeholder-gray-200 dark:placeholder-gray-500 w-full bg-transparent border-0 outline-none resize-none overflow-hidden"
+                        wrap="soft"
+                        rows={1}
                         placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
                         id="logseq-copilot-search"
+                        ref={inputRef}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                (e.target as HTMLFormElement).form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+                            }
+                        }}
                         onChange={(e) => {
                             setQuery(e.target.value);
                         }}
@@ -142,7 +159,7 @@ export const App: React.FC = () => {
                 {results && (
                     <>
                         <hr className="border-gray-600 mx-2" />
-                        <div style={{ color: theme.color }} id="markdown-body" className="p-2" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
+                        <div style={{ color: theme.color }} id="markdown-body" className="p-2 max-h-[50dvh] my-2 overflow-y-auto" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(results) }} />
                         <div className="flex justify-between">
                             <div>
                             <Button className={buttonStyle+"text-slate-700 dark:text-white bg-red-200 dark:bg-red-500"} onClick={onClose}>Close <span className="text-xs ml-0.5"><kbd>Esc</kbd></span></Button>
