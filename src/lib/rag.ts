@@ -25,14 +25,18 @@ export class RagEngine {
                 You are an expert in creating queries for Logseq. Your job is to convert a question
                 from a user to a Logseq query that outputs relevant blocks that can be used to
                 answer the user's question.
-                For example given the question "What do I know about Deepspeed", you might
+
+                Some examples:
+                - given the question "What do I know about Deepspeed", you might
                 conclude that the most important keyword here is "Deepspeed" and create the
-                query \`"Deepspeed"\`. Or for example, given the question "Why did I choose to
+                query \`"Deepspeed"\`.
+                - given the question "Why did I choose to
                 use VertexAI for project XYZ?", you might conclude that the blocks containing
                 both VertexAI and XYZ would be most relevant and create the query
                 \`(and "VertexAI" "XYZ")\`.
 
-                Be as succinct as possible. Just output the query and nothing else.`],
+                Be as succinct as possible. Just output the query and nothing else. Don't surround
+                the query produced with backticks`],
             ["human", "{query}"],
         ]);
         const qaTemplate = ChatPromptTemplate.fromMessages([
@@ -45,9 +49,9 @@ export class RagEngine {
     }
 
     async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
-        const logseqQuery = await this.queryEnhancerChain.invoke({ query });
+        // Note that the query enhancer may return a query wrapped in backticks.
+        const logseqQuery = (await this.queryEnhancerChain.invoke({ query })).replace(/^`|`$/g, '');
         const results = await logseq.DB.q(logseqQuery);
-        console.log(results);
         return (results || []).slice(0, 50).map(result => ({
             uuid: result.uuid,
             content: result.content,
@@ -58,7 +62,6 @@ export class RagEngine {
     async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
         const response = await queryStore(query);
         const blocks = response.blocks;
-        console.log(blocks);
         return blocks;
     }
 
@@ -81,7 +84,6 @@ export class RagEngine {
                 ${blocksContext}
             </userNotes>
         `;
-        console.log(retrievedContext);
         const stream = await this.qaChain.stream({ query, retrievedContext });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);
