@@ -62,7 +62,7 @@ export class RagEngine {
         return blocks;
     }
 
-    async run(query: string) {
+    async run(query: string, onChunkReceived: (token: string) => void) {
         const [logseqBlocks, vectorStoreBlocks] = await Promise.all([
             this.retrieveLogseqBlocks(query),
             this.retrieveVectorStoreBlocks(query),
@@ -82,6 +82,9 @@ export class RagEngine {
             </userNotes>
         `;
         console.log(retrievedContext);
-        return this.qaChain.invoke({ query, retrievedContext });
+        const stream = await this.qaChain.stream({ query, retrievedContext });
+        for await (const chunk of stream) {
+            onChunkReceived(chunk as string);
+        }
     }
 }
