@@ -42,7 +42,7 @@ export class RagEngine {
         const qaTemplate = ChatPromptTemplate.fromMessages([
             ["system", dedent`
                 You are a helpful assistant that can answer questions about the user's notes.
-                Use markdown to format your response.
+                You may use markdown to format your response.
 
                 The user's notes are:
                 {retrievedContext}
