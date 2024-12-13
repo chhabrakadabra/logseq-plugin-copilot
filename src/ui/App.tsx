@@ -20,6 +20,15 @@ export const App: React.FC = () => {
 
     const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        if (query.trim() === "") {
+            const currentBlock = await logseq.Editor.getCurrentBlock();
+            if (currentBlock) {
+                const logbookStart = currentBlock.content.indexOf(":LOGBOOK:");
+                const endOfString = logbookStart > 0 ? logbookStart : currentBlock.content.length;
+                setQuery(currentBlock.content.slice(0, endOfString));
+            }
+            return;
+        }
         setResults("");
         setIsProcessing(true);
         await ragEngine.run(query, (chunk) => {
@@ -59,7 +68,7 @@ export const App: React.FC = () => {
                 <form onSubmit={onSubmit}>
                     <Input
                         className={`p-5 ${isProcessing ? "text-gray-400" : "text-white"} placeholder-gray-200 w-full bg-transparent border-0 outline-none`}
-                        placeholder="Talk to your notes..."
+                        placeholder="Talk to your notes or press enter to bring in the current block..."
                         autoFocus={true}
                         onChange={(e) => {
                             setQuery(e.target.value);
