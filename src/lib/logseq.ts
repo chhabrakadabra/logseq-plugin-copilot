@@ -1,9 +1,18 @@
 import "@logseq/libs";
 import { BlockEntity, SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
-import { clearIndex, indexPage, queryStore } from "./api";
+import { clearIndex, indexPage } from "./api";
 import Semaphore from "semaphore-promise";
 
 export const settingsSchema: SettingSchemaDesc[] = [
+    {
+        key: "SEARCH_HEADS",
+        type: "enum",
+        default: ["logseq"],
+        title: "Search Heads",
+        description: "Search head types to use",
+        enumChoices: ["logseq", "vector"],
+        enumPicker: "checkbox",
+    },
     {
         key: "OPENAI_API_KEY",
         type: "string",
@@ -12,18 +21,18 @@ export const settingsSchema: SettingSchemaDesc[] = [
         description: "Your OpenAI API key",
     },
     {
-        key: "OPENAI_MODEL",
-        type: "string",
-        default: "gpt-4o-mini",
-        title: "OpenAI Model",
-        description: "The OpenAI model to use",
-    },
-    {
         key: "OPENAI_BASE_URL",
         type: "string",
         default: "https://api.openai.com/v1",
         title: "OpenAI Base URL",
         description: "The base URL for the OpenAI API. Most users shouldn't need to change this.",
+    },
+    {
+        key: "OPENAI_MODEL",
+        type: "string",
+        default: "gpt-4o-mini",
+        title: "OpenAI Model",
+        description: "The OpenAI model to use",
     },
     {
         key: "CHAT_DIALOG_SHORTCUT",
