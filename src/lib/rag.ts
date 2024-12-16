@@ -44,6 +44,8 @@ export class RagEngine {
                 You are a helpful assistant that can answer questions about the user's notes.
                 You may use markdown to format your response.
 
+                It is now: {now}.
+
                 The user's notes are:
                 {retrievedContext}
             `],
@@ -74,7 +76,7 @@ export class RagEngine {
     }
 
     async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
-        const response = await queryStore(query);
+        const response = await queryStore(query, logseq.settings!["VECTOR_SIMILARITY_TOP_K"] as number);
         const blocks = response.blocks;
         return blocks;
     }
@@ -108,7 +110,7 @@ export class RagEngine {
                 ${blocksContext}
             </userNotes>
         `;
-        const stream = await this.qaChain.stream({ query, retrievedContext });
+        const stream = await this.qaChain.stream({ query, retrievedContext, now: new Date().toLocaleString() });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);
         }

@@ -40,6 +40,13 @@ export const settingsSchema: SettingSchemaDesc[] = [
         default: "mod+p",
         title: "Chat Dialog Shortcut",
         description: "The shortcut to open the chat dialog",
+    },
+    {
+        key: "VECTOR_SIMILARITY_TOP_K",
+        type: "number",
+        default: 10,
+        title: "Vector Similarity Top K",
+        description: "The number of results to return from the vector store",
     }
 ]
 
