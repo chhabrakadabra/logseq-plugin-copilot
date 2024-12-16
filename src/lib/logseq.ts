@@ -54,6 +54,9 @@ export async function logseqSetup() {
         },
         async () => {
             logseq.showMainUI({ autoFocus: true });
+            setTimeout(() => {
+                document.getElementById("logseq-copilot-search")?.focus();
+            }, 100);
         }
     );
 
