@@ -10,6 +10,7 @@ import { RetrievedBlock } from "../../types";
 export class RagEngine {
     qaChain: Runnable;
     queryEnhancerChain: Runnable;
+    vectorStoreWorker: Worker;
 
     constructor() {
         const model = new ChatOpenAI({
@@ -52,6 +53,9 @@ export class RagEngine {
         const outputParser = new StringOutputParser();
         this.queryEnhancerChain = queryEnhancerTemplate.pipe(model).pipe(outputParser);
         this.qaChain = qaTemplate.pipe(model).pipe(outputParser);
+        this.vectorStoreWorker = new Worker(new URL("../workers/vectorStore.ts", import.meta.url), {
+            type: "module",
+        });
     }
 
     async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
@@ -74,6 +78,7 @@ export class RagEngine {
     }
 
     async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
+        this.vectorStoreWorker.postMessage({ type: "QUERY", payload: query });
         const response = await queryStore(query);
         const blocks = response.blocks;
         return blocks;

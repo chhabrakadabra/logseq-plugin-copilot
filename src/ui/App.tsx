@@ -5,12 +5,10 @@ import { RagEngine } from '../lib/rag';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
-export const App: React.FC = () => {
+export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
     const [query, setQuery] = React.useState("");
     const [results, setResults] = React.useState("");
     const [isProcessing, setIsProcessing] = React.useState(false);
-
-    const ragEngine = new RagEngine();
 
     const onClose = () => {
         logseq.hideMainUI({ restoreEditingCursor: true });
