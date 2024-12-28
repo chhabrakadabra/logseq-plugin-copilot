@@ -53,27 +53,37 @@ export class VectorStore {
         return (await Promise.all(pageBlocks.map(collectChildren))).flat();
     }
 
-    async indexAllPages() {
+    /**
+     * Runs a loop to index pages into the vector store.
+     *
+     * The goal is to run indexing in the background, but try to not block the UI thread too
+     * much. If this proves to be too difficult, we can move this into a web worker.
+     *
+     * @returns Promise that resolves when indexing is complete
+     */
+    async runIndexingLoop() {
         let pages = await logseq.Editor.getAllPages();
         if (!pages || pages.length === 0) {
             logseq.UI.showMsg("Copilot: No pages found", "warning");
             return;
         }
 
-        // Temp: Only index 5 pages
-        pages = pages.slice(0, 5);
+        // Temp: Only index 50 pages
+        pages = pages.slice(0, 50);
 
         const errors = [];
-        const semaphore = new Semaphore(5);
+        const semaphore = new Semaphore(1);
         await Promise.all(pages.map(async (page) => {
             try {
                 const pageBlocks = await this.collectAllBlocks(page.uuid);
                 await semaphore.acquire().then(async (release) => {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                     await this.vectorStore.addDocuments(
                         pageBlocks.filter(
                             (block) => block.content.length > 0
                         ).map(
                             (block) => {
+                                console.log("Indexing block: ", block.content, block.uuid);
                                 return new Document({
                                     pageContent: block.content,
                                     metadata: {

@@ -10,8 +10,8 @@ async function main() {
     await logseqSetup();
     const ragEngine = new RagEngine();
     setTimeout(() => {
-        ragEngine.vectorStore.indexAllPages();  // Don't await this promise.
-    }, 5000);
+        ragEngine.vectorStore.runIndexingLoop();  // Don't await this promise.
+    }, 2000);
 
     const container = document.getElementById("app");
     if (!container) throw new Error("Root element not found");
