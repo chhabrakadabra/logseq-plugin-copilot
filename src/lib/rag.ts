@@ -4,13 +4,13 @@ import "@logseq/libs";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import dedent from "dedent-js";
 import { Runnable } from "@langchain/core/runnables";
-import { queryStore } from "./api";
 import { RetrievedBlock } from "../../types";
+import { VectorStore } from "./vectorStore";
 
 export class RagEngine {
     qaChain: Runnable;
     queryEnhancerChain: Runnable;
-    vectorStoreWorker: Worker;
+    vectorStore: VectorStore;
 
     constructor() {
         const model = new ChatOpenAI({
@@ -53,9 +53,7 @@ export class RagEngine {
         const outputParser = new StringOutputParser();
         this.queryEnhancerChain = queryEnhancerTemplate.pipe(model).pipe(outputParser);
         this.qaChain = qaTemplate.pipe(model).pipe(outputParser);
-        this.vectorStoreWorker = new Worker(new URL("../workers/vectorStore.ts", import.meta.url), {
-            type: "module",
-        });
+        this.vectorStore = new VectorStore();
     }
 
     async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
@@ -78,10 +76,13 @@ export class RagEngine {
     }
 
     async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
-        this.vectorStoreWorker.postMessage({ type: "QUERY", payload: query });
-        const response = await queryStore(query);
-        const blocks = response.blocks;
-        return blocks;
+        const results = await this.vectorStore.query(query, 5);
+        console.log(results);
+        return (results || []).slice(0, 50).map(result => ({
+            uuid: result.id || result.metadata?.blockUuid,
+            content: result.pageContent,
+            pageName: result.metadata?.pageName,
+        }));
     }
 
     async run(query: string, onChunkReceived: (token: string) => void) {
@@ -113,6 +114,7 @@ export class RagEngine {
                 ${blocksContext}
             </userNotes>
         `;
+        console.log("Retrieved context: ", retrievedContext);
         const stream = await this.qaChain.stream({ query, retrievedContext });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);

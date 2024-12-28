@@ -9,6 +9,9 @@ import { RagEngine } from "./lib/rag";
 async function main() {
     await logseqSetup();
     const ragEngine = new RagEngine();
+    setTimeout(() => {
+        ragEngine.vectorStore.indexAllPages();  // Don't await this promise.
+    }, 5000);
 
     const container = document.getElementById("app");
     if (!container) throw new Error("Root element not found");
