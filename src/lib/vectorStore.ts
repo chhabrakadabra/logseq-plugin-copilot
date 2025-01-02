@@ -1,37 +1,49 @@
 import "@logseq/libs";
-
-import { CloseVectorWeb } from "@langchain/community/vectorstores/closevector/web";
-import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/hf_transformers";
-import { env } from "@xenova/transformers";
-import { Document } from "@langchain/core/documents";
-import Semaphore from "semaphore-promise";
 import { BlockEntity, BlockUUIDTuple } from "@logseq/libs/dist/LSPlugin";
+import { VectorStoreBlockDoc } from "../types";
 
-env.useBrowserCache = false;
-env.allowLocalModels = false;
-env.allowRemoteModels = true;
+class PendingQuery {
+    query: string;
+    createdAt: number;
+    status: "pending" | "completed" | "failed";
+    results: VectorStoreBlockDoc[];
+    error: string | null;
+
+    constructor(query: string) {
+        this.query = query;
+        this.createdAt = Date.now();
+        this.status = "pending";
+        this.results = [];
+        this.error = null;
+    }
+}
 
 export class VectorStore {
-    embeddingsModel: HuggingFaceTransformersEmbeddings;
-    vectorStore: CloseVectorWeb;
+    worker: Worker;
+    pendingQueries: Map<string, PendingQuery>;
 
     constructor() {
-        this.embeddingsModel = new HuggingFaceTransformersEmbeddings({
-            model: "Xenova/all-MiniLM-L6-v2"
+        this.worker = new Worker(new URL("../workers/vectorStore.ts", import.meta.url), {
+            type: "module",
         });
-        this.vectorStore = new CloseVectorWeb(this.embeddingsModel, {
-            space: "cosine",
-            numDimensions: 384,
-            maxElements: 1000000,
-        });
-    }
+        this.pendingQueries = new Map();
 
-    async addDocuments(documents: Document[]) {
-        await this.vectorStore.addDocuments(documents);
-    }
+        // Add worker message handler
+        this.worker.onmessage = (event) => {
+            const { type, id, results, error } = event.data;
+            if (type === 'queryResponse') {
+                const pendingQuery = this.pendingQueries.get(id);
+                if (!pendingQuery) return;
 
-    async query(query: string, k: number) {
-        return await this.vectorStore.similaritySearch(query, k);
+                if (error) {
+                    pendingQuery.status = 'failed';
+                    pendingQuery.error = error;
+                } else {
+                    pendingQuery.status = 'completed';
+                    pendingQuery.results = results;
+                }
+            }
+        };
     }
 
     async collectAllBlocks(pageUuid: string): Promise<BlockEntity[]> {
@@ -53,55 +65,69 @@ export class VectorStore {
         return (await Promise.all(pageBlocks.map(collectChildren))).flat();
     }
 
-    /**
-     * Runs a loop to index pages into the vector store.
-     *
-     * The goal is to run indexing in the background, but try to not block the UI thread too
-     * much. If this proves to be too difficult, we can move this into a web worker.
-     *
-     * @returns Promise that resolves when indexing is complete
-     */
-    async runIndexingLoop() {
+    async indexAllPages() {
+        console.log("Starting indexing loop");
         let pages = await logseq.Editor.getAllPages();
         if (!pages || pages.length === 0) {
             logseq.UI.showMsg("Copilot: No pages found", "warning");
             return;
         }
 
-        // Temp: Only index 50 pages
-        pages = pages.slice(0, 50);
+        // Temp: Only index small number of pages
+        pages = pages.slice(0, 10);
 
-        const errors = [];
-        const semaphore = new Semaphore(1);
-        await Promise.all(pages.map(async (page) => {
-            try {
-                const pageBlocks = await this.collectAllBlocks(page.uuid);
-                await semaphore.acquire().then(async (release) => {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await this.vectorStore.addDocuments(
-                        pageBlocks.filter(
-                            (block) => block.content.length > 0
-                        ).map(
-                            (block) => {
-                                console.log("Indexing block: ", block.content, block.uuid);
-                                return new Document({
-                                    pageContent: block.content,
-                                    metadata: {
-                                        pageUuid: page.uuid,
-                                        pageName: page.name,
-                                        journalDay: page.journalDay?.toString(),
-                                        blockUuid: block.uuid,
-                                    },
-                                    id: block.uuid,
-                                })
-                            }
-                        )
-                    );
-                    release();
-                })
-            } catch (e) {
-                errors.push(e);
-            }
-        }));
+        const docs: VectorStoreBlockDoc[] = (await Promise.all(pages.map(async (page) => {
+            const pageBlocks = await this.collectAllBlocks(page.uuid);
+            return pageBlocks.filter(
+                (block) => block.content.length > 0
+            ).map(
+                (block) => {
+                    return {
+                        id: block.uuid,
+                        content: block.content,
+                    }
+                }
+            );
+        }))).flat();
+
+        for (const doc of docs) {
+            this.worker.postMessage({
+                type: "addDocument",
+                document: doc,
+            });
+        }
+        console.log("Indexing loop complete");
+    }
+
+    async query(query: string, numResults: number): Promise<VectorStoreBlockDoc[]> {
+        const id = crypto.randomUUID();
+        this.pendingQueries.set(id, new PendingQuery(query));
+        this.worker.postMessage({
+            type: "query",
+            id,
+            query,
+            numResults,
+        });
+
+        return new Promise((resolve, reject) => {
+            const interval = setInterval(() => {
+                const pendingQuery = this.pendingQueries.get(id);
+                if (!pendingQuery) {
+                    throw new Error("Query not found");
+                }
+                if (pendingQuery.status === "completed") {
+                    resolve(pendingQuery.results);
+                } else if (pendingQuery.status === "failed") {
+                    reject(pendingQuery.error);
+                } else if (Date.now() - pendingQuery.createdAt > 10000) {
+                    reject("Query timed out");
+                } else {
+                    // Wait for the query to complete
+                    return;
+                }
+                this.pendingQueries.delete(id);
+                clearInterval(interval);
+            }, 100);
+        });
     }
 }

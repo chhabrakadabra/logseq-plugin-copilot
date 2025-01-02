@@ -4,7 +4,7 @@ import "@logseq/libs";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import dedent from "dedent-js";
 import { Runnable } from "@langchain/core/runnables";
-import { RetrievedBlock } from "../../types";
+import { Block } from "../types";
 import { VectorStore } from "./vectorStore";
 
 export class RagEngine {
@@ -53,10 +53,12 @@ export class RagEngine {
         const outputParser = new StringOutputParser();
         this.queryEnhancerChain = queryEnhancerTemplate.pipe(model).pipe(outputParser);
         this.qaChain = qaTemplate.pipe(model).pipe(outputParser);
+
         this.vectorStore = new VectorStore();
+        setTimeout(this.vectorStore.indexAllPages.bind(this.vectorStore), 3000);
     }
 
-    async retrieveLogseqBlocks(query: string): Promise<RetrievedBlock[]> {
+    async retrieveLogseqBlocks(query: string): Promise<Block[]> {
         // Note that the query enhancer may return a query wrapped in backticks.
         const logseqQuery = (await this.queryEnhancerChain.invoke({ query })).replace(/^`|`$/g, '');
         let results: any[] | null = null;
@@ -69,19 +71,28 @@ export class RagEngine {
             results = await logseq.DB.q(simpleQuery);
         }
         return (results || []).slice(0, 50).map(result => ({
-            uuid: result.uuid,
+            id: result.uuid,
             content: result.content,
-            pageName: result.page.name
+            page: {
+                id: result.page.uuid,
+                name: result.page.name,
+            },
         }))
     }
 
-    async retrieveVectorStoreBlocks(query: string): Promise<RetrievedBlock[]> {
-        const results = await this.vectorStore.query(query, 5);
-        console.log(results);
-        return (results || []).slice(0, 50).map(result => ({
-            uuid: result.id || result.metadata?.blockUuid,
-            content: result.pageContent,
-            pageName: result.metadata?.pageName,
+    async retrieveVectorStoreBlocks(query: string): Promise<Block[]> {
+        const results = await this.vectorStore.query(query, 20);
+        const blocks = (await Promise.all(results.map(result => logseq.Editor.getBlock(result.id)))).filter(block => block !== null);
+        return await Promise.all(blocks.map(async block => {
+            const page = await logseq.Editor.getPage(block.page.id);
+            return {
+                id: block.uuid,
+                content: block.content,
+                page: {
+                    id: page?.uuid || "",
+                    name: page?.name || "Unknown",
+                },
+            };
         }));
     }
 
@@ -103,7 +114,7 @@ export class RagEngine {
         const blocks = (await Promise.all(searchHeads)).flat();
         const blocksContext = blocks.map(block => dedent`
             <block>
-                <title>${block.pageName}</title>
+                <title>${block.page.name}</title>
                 <content>
                 ${block.content.slice(0, 1000)}
                 </content>
@@ -114,7 +125,6 @@ export class RagEngine {
                 ${blocksContext}
             </userNotes>
         `;
-        console.log("Retrieved context: ", retrievedContext);
         const stream = await this.qaChain.stream({ query, retrievedContext });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);
