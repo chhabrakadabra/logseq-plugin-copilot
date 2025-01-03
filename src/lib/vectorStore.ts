@@ -74,7 +74,7 @@ export class VectorStore {
         }
 
         // Temp: Only index small number of pages
-        pages = pages.slice(0, 10);
+        pages = pages.slice(0, 300);
 
         const docs: VectorStoreBlockDoc[] = (await Promise.all(pages.map(async (page) => {
             const pageBlocks = await this.collectAllBlocks(page.uuid);
