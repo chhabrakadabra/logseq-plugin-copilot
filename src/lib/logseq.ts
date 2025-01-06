@@ -3,15 +3,6 @@ import { SettingSchemaDesc } from "@logseq/libs/dist/LSPlugin";
 
 export const settingsSchema: SettingSchemaDesc[] = [
     {
-        key: "SEARCH_HEADS",
-        type: "enum",
-        default: ["logseq"],
-        title: "Search Heads",
-        description: "Search head types to use",
-        enumChoices: ["logseq", "vector"],
-        enumPicker: "checkbox",
-    },
-    {
         key: "OPENAI_API_KEY",
         type: "string",
         default: "",
