@@ -39,7 +39,6 @@
     "llamaindex": "^0.8.27",
     "marked": "^15.0.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "semaphore-promise": "^1.4.2"
+    "react-dom": "^19.0.0"
   }
 }
