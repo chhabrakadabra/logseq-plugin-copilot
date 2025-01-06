@@ -99,15 +99,11 @@ export class VectorStore {
     }
 
     async indexAllPages() {
-        console.log("Starting indexing loop");
         let pages = await logseq.Editor.getAllPages();
         if (!pages || pages.length === 0) {
             logseq.UI.showMsg("Copilot: No pages found", "warning");
             return;
         }
-
-        // Temp: Only index small number of pages
-        pages = pages.slice(0, 300);
 
         const docs: VectorStoreBlockDoc[] = (await Promise.all(pages.map(async (page) => {
             const pageBlocks = await this.collectAllBlocks(page.uuid);
@@ -129,7 +125,6 @@ export class VectorStore {
                 document: doc,
             });
         }
-        console.log("Indexing loop complete");
     }
 
     async query(query: string, numResults: number): Promise<VectorStoreBlockDoc[]> {
