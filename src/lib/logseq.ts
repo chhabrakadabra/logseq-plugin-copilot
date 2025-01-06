@@ -29,6 +29,13 @@ export const settingsSchema: SettingSchemaDesc[] = [
         default: "mod+p",
         title: "Chat Dialog Shortcut",
         description: "The shortcut to open the chat dialog",
+    },
+    {
+        key: "VECTOR_SIMILARITY_TOP_K",
+        type: "number",
+        default: 20,
+        title: "(Advanced) Vector Similarity Top K",
+        description: "The number of results to return from the vector store",
     }
 ]
 
@@ -43,6 +50,9 @@ export async function logseqSetup() {
         },
         async () => {
             logseq.showMainUI({ autoFocus: true });
+            setTimeout(() => {
+                document.getElementById("logseq-copilot-search")?.focus();
+            }, 100);
         }
     );
 
