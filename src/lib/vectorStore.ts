@@ -1,5 +1,5 @@
 import "@logseq/libs";
-import { BlockEntity, BlockUUIDTuple } from "@logseq/libs/dist/LSPlugin";
+import { BlockEntity, BlockUUIDTuple, IDatom, IHookEvent } from "@logseq/libs/dist/LSPlugin";
 import { VectorStoreBlockDoc } from "../types";
 
 class PendingQuery {
@@ -44,6 +44,39 @@ export class VectorStore {
                 }
             }
         };
+        logseq.DB.onChanged(this.onLogseqDBChanged.bind(this));
+    }
+
+    async onLogseqDBChanged(event: IHookEvent & {
+        blocks: BlockEntity[];
+        txData: IDatom[];
+        txMeta?: { [key: string]: any; outlinerOp: string; }
+    }) {
+        // This hook is file level. We want only blocks, which have content. If content is empty,
+        // it's likely to be deleted, which we still need to index.
+        const blocks = event.blocks.filter((block) => ["content", "page", "uuid"].reduce((acc, p) => acc && block.hasOwnProperty(p), true));
+        if (blocks.length === 0) return;
+
+        if (event.txMeta?.outlinerOp === "delete-blocks") {
+            // Delete the blocks from the vector store
+            for (const block of blocks) {
+                this.worker.postMessage({
+                    type: "deleteDocument",
+                    id: block.uuid,
+                });
+            }
+        } else if (event.txMeta?.outlinerOp === "save-block") {
+            // Add the blocks to the vector store
+            for (const block of blocks) {
+                this.worker.postMessage({
+                    type: "addDocument",
+                    document: {
+                        id: block.uuid,
+                        content: block.content,
+                    },
+                });
+            }
+        }
     }
 
     async collectAllBlocks(pageUuid: string): Promise<BlockEntity[]> {

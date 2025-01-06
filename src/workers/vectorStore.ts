@@ -3,6 +3,7 @@ import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddin
 import { env } from "@xenova/transformers";
 import { Document } from "@langchain/core/documents";
 import { VectorStoreBlockDoc } from "../types";
+import { CloseVectorDocument } from "closevector-web";
 
 env.useBrowserCache = false;
 env.allowLocalModels = false;
@@ -113,6 +114,25 @@ export class VectorStore {
         }
     }
 
+    async deleteFromPersistentDB(id: string) {
+        return new Promise((resolve, reject) => {
+            if (!this.persistentDB) {
+                console.error("Persistent DB not open. Cannot delete from it.");
+                reject(new Error("Persistent DB not open. Cannot delete from it."));
+                return;
+            }
+            const transaction = this.persistentDB.transaction(INDEXDB_STORE_NAME, "readwrite");
+            const store = transaction.objectStore(INDEXDB_STORE_NAME);
+            const deleteRequest = store.delete(id);
+            deleteRequest.onsuccess = () => {
+                resolve(undefined);
+            };
+            deleteRequest.onerror = (event) => {
+                reject(new Error(`Error deleting document from persistent DB: ${event.target}`));
+            };
+        });
+    }
+
     /**
      * Check if the text of a document is already in the persistent DB.
      *
@@ -181,6 +201,27 @@ export class VectorStore {
             content: result.pageContent,
         }));
     }
+
+    async deleteDocument(id: string) {
+        // FIXME: We're iterating over the entire docstore, which is not efficient. We might want to
+        // consider pre-building a mapping between these IDs.
+        let docToDelete: CloseVectorDocument | null = null;
+        let docstoreIdToDelete: string | null = null;
+        for (const [docstoreId, doc] of this.vectorStore.instance.docstore._docs) {
+            if (doc.metadata?.docId === id) {
+                docToDelete = doc;
+                docstoreIdToDelete = docstoreId;
+                break;
+            }
+        }
+        if (docToDelete && docstoreIdToDelete) {
+            this.vectorStore.instance.docstore._docs.delete(docstoreIdToDelete);
+            this.vectorStore.instance.index.markDelete(Number(docstoreIdToDelete));
+            await this.deleteFromPersistentDB(id);
+        } else {
+            console.error("Document not found in docstore. Cannot delete.");
+        }
+    }
 }
 
 const vectorStore = new VectorStore();
@@ -189,6 +230,8 @@ onmessage = async (event) => {
     const message = event.data;
     if (message.type === "addDocument") {
         vectorStore.queueDocumentForAddition(message.document);
+    } else if (message.type === "deleteDocument") {
+        await vectorStore.deleteDocument(message.id);
     } else if (message.type === "query") {
         try {
             const results = await vectorStore.query(message.query, message.numResults);
