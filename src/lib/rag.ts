@@ -100,8 +100,25 @@ export class RagEngine {
     }
 
     async run(query: string, onChunkReceived: (token: string) => void) {
-        const searchHeads = [this.retrieveLogseqBlocks(query), this.retrieveVectorStoreBlocks(query)];
-        const blocks = (await Promise.all(searchHeads)).flat();
+        const logseqBlocksPromise = this.retrieveLogseqBlocks(query);
+        const vectorStoreBlocksPromise = this.retrieveVectorStoreBlocks(query);
+
+        let blocks: Block[] = [];
+        try {
+            blocks.push(...(await logseqBlocksPromise));
+        } catch (e) {
+            console.warn("Error retrieving logseq blocks", e);
+        }
+        try {
+            blocks.push(...(await vectorStoreBlocksPromise));
+        } catch (e) {
+            console.warn("Error retrieving vector store blocks", e);
+        }
+
+        if (blocks.length === 0) {
+            console.warn("No blocks found. Attempting to answer question without any Logseq context.");
+        }
+
         const blocksContext = blocks.map(block => dedent`
             <block>
                 <title>${block.page.name}</title>
