@@ -13,7 +13,7 @@ const INDEXDB_NAME = "vectorStore";
 const INDEXDB_STORE_NAME = "vectorStore";
 const INDEXDB_VERSION = 1;
 const MAX_DOCS_TO_ADD_AT_A_TIME = 10;
-const INTERVAL_BETWEEN_ADDITIONS_MS = 50;
+const INTERVAL_BETWEEN_ADDITIONS_MS = 100;
 
 
 export class VectorStore {
@@ -203,6 +203,12 @@ export class VectorStore {
     }
 
     async deleteDocument(id: string) {
+        try {
+            await this.deleteFromPersistentDB(id);
+        } catch (e) {
+            console.error("Error deleting document from persistent DB", e);
+        }
+
         // FIXME: We're iterating over the entire docstore, which is not efficient. We might want to
         // consider pre-building a mapping between these IDs.
         let docToDelete: CloseVectorDocument | null = null;
@@ -217,7 +223,6 @@ export class VectorStore {
         if (docToDelete && docstoreIdToDelete) {
             this.vectorStore.instance.docstore._docs.delete(docstoreIdToDelete);
             this.vectorStore.instance.index.markDelete(Number(docstoreIdToDelete));
-            await this.deleteFromPersistentDB(id);
         } else {
             console.error("Document not found in docstore. Cannot delete.");
         }
