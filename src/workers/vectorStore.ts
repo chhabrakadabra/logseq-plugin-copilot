@@ -4,6 +4,7 @@ import { env } from "@xenova/transformers";
 import { Document } from "@langchain/core/documents";
 import { VectorStoreBlockDoc } from "../types";
 import { CloseVectorDocument } from "closevector-web";
+import logger from '../lib/logger';
 
 env.useBrowserCache = false;
 env.allowLocalModels = false;
@@ -39,7 +40,7 @@ export class VectorStore {
             setInterval(this.addDocumentsFromQueue.bind(this), INTERVAL_BETWEEN_ADDITIONS_MS);
         };
         dbRequest.onerror = (event) => {
-            console.error("Error opening indexedDB: ", event, ". Falling back to full indexing and in-memory storage.");
+            logger.error("Error opening indexedDB: ", event, ". Falling back to full indexing and in-memory storage.");
             setInterval(this.addDocumentsFromQueue.bind(this), INTERVAL_BETWEEN_ADDITIONS_MS);
         };
         dbRequest.onupgradeneeded = (event) => {
@@ -54,7 +55,7 @@ export class VectorStore {
 
     async loadFromPersistentDB() {
         if (!this.persistentDB) {
-            console.error("Persistent DB not open. Cannot load from it.");
+            logger.error("Persistent DB not open. Cannot load from it.");
             return;
         }
 
@@ -80,13 +81,13 @@ export class VectorStore {
                     cursor.continue();
                 } else {
                     if (docs.length > 0) {
-                        console.log(`Adding ${docs.length} documents to vector store...`);
+                        logger.log(`Adding ${docs.length} documents to vector store...`);
                         await this.vectorStore.addVectors(
                             docs.map(d => d.vector),
                             docs.map(d => d.document)
                         );
                     }
-                    console.log("Loaded all documents from persistent DB.");
+                    logger.log("Loaded all documents from persistent DB.");
                     resolve(undefined);
                 }
             };
@@ -95,7 +96,7 @@ export class VectorStore {
 
     saveToPersistentDB(vectors: number[][], docs: VectorStoreBlockDoc[]) {
         if (!this.persistentDB) {
-            console.error("Persistent DB not open. Cannot save to it.");
+            logger.error("Persistent DB not open. Cannot save to it.");
             return;
         }
         if (vectors.length !== docs.length) {
@@ -117,7 +118,7 @@ export class VectorStore {
     async deleteFromPersistentDB(id: string) {
         return new Promise((resolve, reject) => {
             if (!this.persistentDB) {
-                console.error("Persistent DB not open. Cannot delete from it.");
+                logger.error("Persistent DB not open. Cannot delete from it.");
                 reject(new Error("Persistent DB not open. Cannot delete from it."));
                 return;
             }
@@ -145,7 +146,7 @@ export class VectorStore {
      */
     async isDocTextInPersistentDB(doc: VectorStoreBlockDoc) {
         if (!this.persistentDB) {
-            console.error("Persistent DB not open. Cannot check if doc is in it.");
+            logger.error("Persistent DB not open. Cannot check if doc is in it.");
             return false;
         }
         const transaction = this.persistentDB.transaction(INDEXDB_STORE_NAME, "readonly");
@@ -180,7 +181,7 @@ export class VectorStore {
 
             docs.push(candidate);
         }
-        console.log(`Adding ${docs.length} documents from queue. Queue size: ${this.docsToBeAdded.length}`);
+        logger.log(`Adding ${docs.length} documents from queue. Queue size: ${this.docsToBeAdded.length}`);
         const texts = docs.map(doc => doc.content);
         const vectors = await this.embeddingsModel.embedDocuments(texts);
         await this.vectorStore.addVectors(vectors, docs.map(doc => new Document({
@@ -194,7 +195,7 @@ export class VectorStore {
     }
 
     async query(query: string, numResults: number): Promise<VectorStoreBlockDoc[]> {
-        console.log(`Querying vector store with total elements: ${this.vectorStore.instance.docstore._docs.size}`);
+        logger.log(`Querying vector store with total elements: ${this.vectorStore.instance.docstore._docs.size}`);
         const results = await this.vectorStore.similaritySearch(query, numResults);
         return results.map(result => ({
             id: result.id || result.metadata?.docId || "",
@@ -206,7 +207,7 @@ export class VectorStore {
         try {
             await this.deleteFromPersistentDB(id);
         } catch (e) {
-            console.error("Error deleting document from persistent DB", e);
+            logger.error("Error deleting document from persistent DB", e);
         }
 
         // FIXME: We're iterating over the entire docstore, which is not efficient. We might want to
@@ -224,7 +225,7 @@ export class VectorStore {
             this.vectorStore.instance.docstore._docs.delete(docstoreIdToDelete);
             this.vectorStore.instance.index.markDelete(Number(docstoreIdToDelete));
         } else {
-            console.error("Document not found in docstore. Cannot delete.");
+            logger.error("Document not found in docstore. Cannot delete.");
         }
     }
 }

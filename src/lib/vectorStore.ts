@@ -1,6 +1,7 @@
 import "@logseq/libs";
 import { BlockEntity, BlockUUIDTuple, IDatom, IHookEvent } from "@logseq/libs/dist/LSPlugin";
 import { VectorStoreBlockDoc } from "../types";
+import logger from "./logger";
 
 class PendingQuery {
     query: string;
@@ -86,7 +87,7 @@ export class VectorStore {
                 // This is a BlockUUIDTuple, fetch the block and its children.
                 const fetchedBlock = await logseq.Editor.getBlock(block[1], { includeChildren: true });
                 if (!fetchedBlock) {
-                    console.error("Failed to fetch block: ", block);
+                    logger.error("Failed to fetch block: ", block);
                     return [];
                 }
                 block = fetchedBlock;

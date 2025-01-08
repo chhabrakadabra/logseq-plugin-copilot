@@ -1,3 +1,7 @@
+declare global {
+    const __DEV__: boolean;
+}
+
 interface VectorStoreBlockDoc {
     id: string;
     content: string;
