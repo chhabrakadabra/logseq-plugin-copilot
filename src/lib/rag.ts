@@ -6,6 +6,7 @@ import dedent from "dedent-js";
 import { Runnable } from "@langchain/core/runnables";
 import { Block } from "../types";
 import { VectorStore } from "./vectorStore";
+import logger from "./logger";
 
 export class RagEngine {
     qaChain: Runnable;
@@ -67,7 +68,7 @@ export class RagEngine {
         try {
             results = await logseq.DB.q(logseqQuery);
         } catch (e) {
-            console.error("Error querying Logseq with enhanced query. Falling back.", e);
+            logger.error("Error querying Logseq with enhanced query. Falling back.", e);
             const simpleQueryParts = query.replace(/[^a-zA-Z0-9\-]/g, '').split(" ");
             const simpleQuery = `(and ${simpleQueryParts.map(word => `"${word}"`).join(" ")})`;
             results = await logseq.DB.q(simpleQuery);
@@ -107,16 +108,16 @@ export class RagEngine {
         try {
             blocks.push(...(await logseqBlocksPromise));
         } catch (e) {
-            console.warn("Error retrieving logseq blocks", e);
+            logger.warn("Error retrieving logseq blocks", e);
         }
         try {
             blocks.push(...(await vectorStoreBlocksPromise));
         } catch (e) {
-            console.warn("Error retrieving vector store blocks", e);
+            logger.warn("Error retrieving vector store blocks", e);
         }
 
         if (blocks.length === 0) {
-            console.warn("No blocks found. Attempting to answer question without any Logseq context.");
+            logger.warn("No blocks found. Attempting to answer question without any Logseq context.");
         }
 
         const blocksContext = blocks.map(block => dedent`
