@@ -34,9 +34,7 @@
     "closevector-web": "^0.1.6",
     "dedent-js": "^1.0.1",
     "dompurify": "^3.2.3",
-    "express": "^4.21.2",
     "langchain": "^0.3.7",
-    "llamaindex": "^0.8.27",
     "marked": "^15.0.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
