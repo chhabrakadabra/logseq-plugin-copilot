@@ -7,6 +7,7 @@ import { Runnable } from "@langchain/core/runnables";
 import { Block } from "../types";
 import { VectorStore } from "./vectorStore";
 import logger from "./logger";
+import { BlockEntity, BlockUUIDTuple, PageEntity } from "@logseq/libs/dist/LSPlugin.user";
 
 export class RagEngine {
     qaChain: Runnable;
@@ -61,7 +62,7 @@ export class RagEngine {
         setTimeout(this.vectorStore.indexAllPages.bind(this.vectorStore), 3000);
     }
 
-    async retrieveLogseqBlocks(query: string): Promise<Block[]> {
+    async retrieveLogseqBlocks(query: string): Promise<string[]> {
         // Note that the query enhancer may return a query wrapped in backticks.
         const logseqQuery = (await this.queryEnhancerChain.invoke({ query })).replace(/^`|`$/g, '');
         let results: any[] | null = null;
@@ -73,66 +74,87 @@ export class RagEngine {
             const simpleQuery = `(and ${simpleQueryParts.map(word => `"${word}"`).join(" ")})`;
             results = await logseq.DB.q(simpleQuery);
         }
-        return (results || []).slice(0, 50).map(result => ({
-            id: result.uuid,
-            content: result.content,
-            page: {
-                id: result.page.uuid,
-                name: result.page.name,
-            },
-        }))
+        logger.log("Logseq results:", results);
+        // For some reason, the results from logseq.DB.q are not the same as the results from
+        // logseq.Editor.getBlock. For one, the results from logseq.DB.q don't have a list of child
+        // blocks. Let's just return block IDs here and process the unified set of blocks later.
+        return (results || []).slice(0, 10).map(result => result.uuid);
     }
 
-    async retrieveVectorStoreBlocks(query: string): Promise<Block[]> {
-        const topK = logseq.settings!["VECTOR_SIMILARITY_TOP_K"] as number;
+    async retrieveVectorStoreBlocks(query: string): Promise<string[]> {
+        const topK = Number(logseq.settings!["VECTOR_SIMILARITY_TOP_K"]);
         const results = await this.vectorStore.query(query, topK);
-        const blocks = (await Promise.all(results.map(result => logseq.Editor.getBlock(result.id)))).filter(block => block !== null);
-        return await Promise.all(blocks.map(async block => {
-            const page = await logseq.Editor.getPage(block.page.id);
-            return {
-                id: block.uuid,
-                content: block.content,
-                page: {
-                    id: page?.uuid || "",
-                    name: page?.name || "Unknown",
-                },
-            };
-        }));
+        logger.log("Vector store results:", results);
+        return results.map(result => result.id);
+    }
+
+    async processLogseqBlock(block: BlockEntity | BlockUUIDTuple, page: PageEntity | null): Promise<Block> {
+        if (Array.isArray(block)) {
+            const candidateBlock = await logseq.Editor.getBlock(block[1]);
+            if (!candidateBlock) {
+                throw new Error("Block not found");
+            }
+            block = candidateBlock;
+        }
+        return {
+            id: block.uuid,
+            content: block.content,
+            page: page ? {
+                id: page.uuid,
+                name: page.name,
+            } : null,
+            children: block.children?.map(async child => await this.processLogseqBlock(child, null)),
+        };
+    }
+
+    async blockToContext(block: Block): Promise<string> {
+        return dedent`
+            <block>
+                ${block.page ? `<title>${block.page.name}</title>` : ""}
+                <content>
+                ${block.content.slice(0, 1000)}
+                </content>
+                ${block.children.length > 0 ?
+                `<children>
+                    ${(await Promise.all(block.children.map(async child => this.blockToContext(await child)))).join("\n")}
+                </children>` :
+                ""}
+            </block>
+        `;
     }
 
     async run(query: string, onChunkReceived: (token: string) => void) {
         const logseqBlocksPromise = this.retrieveLogseqBlocks(query);
         const vectorStoreBlocksPromise = this.retrieveVectorStoreBlocks(query);
 
-        let blocks: Block[] = [];
+        let blockUUIDs = new Set<string>();
         try {
-            blocks.push(...(await logseqBlocksPromise));
+            (await logseqBlocksPromise).forEach(id => blockUUIDs.add(id));
         } catch (e) {
             logger.warn("Error retrieving logseq blocks", e);
         }
         try {
-            blocks.push(...(await vectorStoreBlocksPromise));
+            (await vectorStoreBlocksPromise).forEach(id => blockUUIDs.add(id));
         } catch (e) {
             logger.warn("Error retrieving vector store blocks", e);
         }
 
-        if (blocks.length === 0) {
+        if (blockUUIDs.size === 0) {
             logger.warn("No blocks found. Attempting to answer question without any Logseq context.");
         }
 
-        const blocksContext = blocks.map(block => dedent`
-            <block>
-                <title>${block.page.name}</title>
-                <content>
-                ${block.content.slice(0, 1000)}
-                </content>
-            </block>
-        `).join("\n");
+        const blocks = await Promise.all((
+            await Promise.all(Array.from(blockUUIDs).map(id => logseq.Editor.getBlock(id)))
+        ).filter(block => block !== null).map(async block => {
+            const page = await logseq.Editor.getPage(block.page.id);
+            return await this.processLogseqBlock(block, page);
+        }));
         const retrievedContext = dedent`
             <userNotes>
-                ${blocksContext}
+                ${(await Promise.all(blocks.map(block => this.blockToContext(block)))).join("\n")}
             </userNotes>
         `;
+        logger.log(retrievedContext);
         const stream = await this.qaChain.stream({ query, retrievedContext, now: new Date().toLocaleString() });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);

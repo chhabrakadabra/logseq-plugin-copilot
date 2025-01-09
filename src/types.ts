@@ -15,7 +15,8 @@ interface Page {
 interface Block {
     id: string;
     content: string;
-    page: Page;
+    page: Page | null;
+    children: Block[];
 }
 
 export type { VectorStoreBlockDoc, Page, Block };
