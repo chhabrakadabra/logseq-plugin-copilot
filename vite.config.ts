@@ -6,5 +6,8 @@ export default defineConfig({
     plugins: [logseqDevPlugin(), react()],
     define: {
         __DEV__: JSON.stringify(!process.env.PROD),
+    },
+    worker: {
+        format: "es",
     }
 });

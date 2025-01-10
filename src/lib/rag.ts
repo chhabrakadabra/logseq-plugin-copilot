@@ -96,6 +96,7 @@ export class RagEngine {
             }
             block = candidateBlock;
         }
+        const children = await Promise.all(block.children?.map(async child => await this.processLogseqBlock(child, null)) || []);
         return {
             id: block.uuid,
             content: block.content,
@@ -103,7 +104,7 @@ export class RagEngine {
                 id: page.uuid,
                 name: page.name,
             } : null,
-            children: block.children?.map(async child => await this.processLogseqBlock(child, null)),
+            children: children,
         };
     }
 
