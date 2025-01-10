@@ -1,6 +1,7 @@
 {
   "name": "logseq-plugin-copilot",
   "author": "Abhin Chhabra",
+  "description": "Talk to AI about your Logseq notes.",
   "private": true,
   "main": "dist/index.html",
   "scripts": {
@@ -9,8 +10,9 @@
     "preview": "NODE_ENV=production vite preview"
   },
   "logseq": {
-    "name": "logseq-plugin-copilot",
-    "id": "_8hs96bamw"
+    "id": "_8hs96bamw",
+    "title": "Logseq Copilot",
+    "icon": "./icon.svg"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
