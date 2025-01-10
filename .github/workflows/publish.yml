@@ -22,7 +22,7 @@ jobs:
       - name: Build
         id: build
         run: |
-          npm install
+          npm install --include=dev
           npm run build
           mkdir ${{ env.PLUGIN_NAME }}
           cp README.md package.json icon.svg demo.gif ${{ env.PLUGIN_NAME }}
