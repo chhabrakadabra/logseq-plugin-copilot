@@ -49,6 +49,14 @@ export async function logseqSetup() {
             keybinding: { binding: logseq.settings!["CHAT_DIALOG_SHORTCUT"] as string }
         },
         async () => {
+            const apiKey = logseq.settings!["OPENAI_API_KEY"] as string;
+            if (!apiKey) {
+                logseq.UI.showMsg(
+                    "Please set your OpenAI API key in the Logseq Copilot plugin settings.",
+                    "error"
+                );
+                return;
+            }
             logseq.showMainUI({ autoFocus: true });
             setTimeout(() => {
                 document.getElementById("logseq-copilot-search")?.focus();

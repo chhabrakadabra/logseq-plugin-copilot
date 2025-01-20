@@ -4,6 +4,7 @@ import { Dialog, DialogBackdrop, DialogPanel, Button, Textarea } from '@headless
 import { RagEngine } from '../lib/rag';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { AuthenticationError } from 'openai';
 
 
 export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
@@ -43,10 +44,21 @@ export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
         }
         setResults("");
         setIsProcessing(true);
-        await ragEngine.run(query, (chunk) => {
-            setResults(prevResults => prevResults + chunk);
-        });
-        setIsProcessing(false);
+        try {
+            await ragEngine.run(query, (chunk) => {
+                setResults(prevResults => prevResults + chunk);
+            });
+        } catch (e) {
+            const error = e as Error;
+            if (error instanceof AuthenticationError) {
+                logseq.UI.showMsg("Copilot: Authentication failed. Please check your OpenAI API key in settings", "error");
+            } else {
+                logseq.UI.showMsg("Copilot: Error running query", "error");
+            }
+            console.error(e);
+        } finally {
+            setIsProcessing(false);
+        }
     }, [query]);
 
     const parseIncompleteMarkdown = (markdown: string) => {

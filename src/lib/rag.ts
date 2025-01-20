@@ -10,11 +10,17 @@ import logger from "./logger";
 import { BlockEntity, BlockUUIDTuple, PageEntity } from "@logseq/libs/dist/LSPlugin.user";
 
 export class RagEngine {
-    qaChain: Runnable;
-    queryEnhancerChain: Runnable;
+    qaChain!: Runnable;
+    queryEnhancerChain!: Runnable;
     vectorStore: VectorStore;
 
     constructor() {
+        this.setUpLLMChains();
+        this.vectorStore = new VectorStore();
+        setTimeout(this.vectorStore.indexAllPages.bind(this.vectorStore), 3000);
+    }
+
+    setUpLLMChains() {
         const model = new ChatOpenAI({
             configuration: {
                 baseURL: logseq.settings!["OPENAI_BASE_URL"] as string,
@@ -57,9 +63,6 @@ export class RagEngine {
         const outputParser = new StringOutputParser();
         this.queryEnhancerChain = queryEnhancerTemplate.pipe(model).pipe(outputParser);
         this.qaChain = qaTemplate.pipe(model).pipe(outputParser);
-
-        this.vectorStore = new VectorStore();
-        setTimeout(this.vectorStore.indexAllPages.bind(this.vectorStore), 3000);
     }
 
     async retrieveLogseqBlocks(query: string): Promise<string[]> {

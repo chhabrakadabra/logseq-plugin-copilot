@@ -10,6 +10,10 @@ async function main() {
     await logseqSetup();
     const ragEngine = new RagEngine();
 
+    logseq.onSettingsChanged(() => {
+        ragEngine.setUpLLMChains();
+    })
+
     const container = document.getElementById("app");
     if (!container) throw new Error("Root element not found");
     const root = ReactDOM.createRoot(container);
