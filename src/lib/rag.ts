@@ -8,6 +8,8 @@ import { Block } from "../types";
 import { VectorStore } from "./vectorStore";
 import logger from "./logger";
 import { BlockEntity, BlockUUIDTuple, PageEntity } from "@logseq/libs/dist/LSPlugin.user";
+import { HumanMessage, AIMessage, Message } from "./chat";
+import { HumanMessage as LangChainHumanMessage, AIMessage as LangChainAIMessage } from "@langchain/core/messages";
 
 export class RagEngine {
     qaChain!: Runnable;
@@ -58,6 +60,7 @@ export class RagEngine {
                 The user's notes are:
                 {retrievedContext}
             `],
+            ["placeholder", "{history}"],
             ["human", "{query}"],
         ]);
         const outputParser = new StringOutputParser();
@@ -127,22 +130,25 @@ export class RagEngine {
         `;
     }
 
-    async run(query: string, onChunkReceived: (token: string) => void) {
-        const logseqBlocksPromise = this.retrieveLogseqBlocks(query);
-        const vectorStoreBlocksPromise = this.retrieveVectorStoreBlocks(query);
+    async run(chatMessages: Message[], onChunkReceived: (token: string) => void) {
+        const queries = chatMessages.filter(message => message instanceof HumanMessage).map(message => message.msg);
 
         let blockUUIDs = new Set<string>();
-        try {
-            (await logseqBlocksPromise).forEach(id => blockUUIDs.add(id));
-        } catch (e) {
-            logger.warn("Error retrieving logseq blocks", e);
-        }
-        try {
-            (await vectorStoreBlocksPromise).forEach(id => blockUUIDs.add(id));
-        } catch (e) {
-            logger.warn("Error retrieving vector store blocks", e);
-        }
+        for (const query of queries) {
+            const logseqBlocksPromise = this.retrieveLogseqBlocks(query);
+            const vectorStoreBlocksPromise = this.retrieveVectorStoreBlocks(query);
 
+            try {
+                (await logseqBlocksPromise).forEach(id => blockUUIDs.add(id));
+            } catch (e) {
+                logger.warn("Error retrieving logseq blocks", e);
+            }
+            try {
+                (await vectorStoreBlocksPromise).forEach(id => blockUUIDs.add(id));
+            } catch (e) {
+                logger.warn("Error retrieving vector store blocks", e);
+            }
+        }
         if (blockUUIDs.size === 0) {
             logger.warn("No blocks found. Attempting to answer question without any Logseq context.");
         }
@@ -159,7 +165,20 @@ export class RagEngine {
             </userNotes>
         `;
         logger.log(retrievedContext);
-        const stream = await this.qaChain.stream({ query, retrievedContext, now: new Date().toLocaleString() });
+        const stream = await this.qaChain.stream({
+            query: queries[queries.length - 1],
+            retrievedContext,
+            now: new Date().toLocaleString(),
+            history: chatMessages.slice(0, -1).map(message => {
+                if (message instanceof HumanMessage) {
+                    return new LangChainHumanMessage(message.msg);
+                } else if (message instanceof AIMessage) {
+                    return new LangChainAIMessage(message.msg);
+                } else {
+                    throw new Error("Unknown message type");
+                }
+            })
+        });
         for await (const chunk of stream) {
             onChunkReceived(chunk as string);
         }

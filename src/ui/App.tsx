@@ -32,10 +32,11 @@ export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
 
     const onSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setChatMessages([new HumanMessage(crypto.randomUUID(), query)]);
+        const newChatMessages = [...chatMessages, new HumanMessage(crypto.randomUUID(), query)];
+        setChatMessages(newChatMessages);
         setIsProcessing(true);
         try {
-            await ragEngine.run(query, (chunk) => {
+            await ragEngine.run(newChatMessages, (chunk) => {
                 setChatMessages(prevResults => {
                     const lastMessage = prevResults[prevResults.length - 1];
                     if (lastMessage instanceof AIMessage) {
