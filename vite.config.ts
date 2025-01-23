@@ -9,5 +9,6 @@ export default defineConfig({
     },
     worker: {
         format: "es",
-    }
+    },
+    assetsInclude: ['**/*.svg']
 });

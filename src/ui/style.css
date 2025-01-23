@@ -2,7 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-#markdown-body {
+kbd {
+    @apply border-solid border-2 border-gray-500 rounded-md px-2 py-0.5 my-1;
+}
+
+.markdown-body {
     & li > p {
         display: inline;
     }

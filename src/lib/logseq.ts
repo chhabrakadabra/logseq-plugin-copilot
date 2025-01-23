@@ -66,3 +66,58 @@ export async function logseqSetup() {
 
     logseq.setMainUIInlineStyle({ zIndex: 100 });
 }
+
+export class Theme {
+    private static camelToKebab(str: string): string {
+        return str.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+    }
+    private static defaultProps = {
+        primaryBackgroundColor: "slate",
+        secondaryBackgroundColor: "slate",
+        tertiaryBackgroundColor: "slate",
+        quaternaryBackgroundColor: "slate",
+        activePrimaryColor: "white",
+        activeSecondaryColor: "white",
+        borderColor: "slate",
+        secondaryBorderColor: "slate",
+        tertiaryBorderColor: "slate",
+        primaryTextColor: "white",
+        secondaryTextColor: "white",
+        blockHighlightColor: "slate"
+    }
+
+    constructor(
+        public props: {
+            primaryBackgroundColor: string;
+            secondaryBackgroundColor: string;
+            tertiaryBackgroundColor: string;
+            quaternaryBackgroundColor: string;
+            activePrimaryColor: string;
+            activeSecondaryColor: string;
+            borderColor: string;
+            secondaryBorderColor: string;
+            tertiaryBorderColor: string;
+            primaryTextColor: string;
+            secondaryTextColor: string;
+            blockHighlightColor: string;
+        } = Theme.defaultProps,
+    ) { }
+
+    public static async fromLogseq(): Promise<Theme> {
+        let mapToLogseqProps: { [key: string]: string } = {};
+        Object.keys(Theme.defaultProps).forEach((key) => {
+            mapToLogseqProps[key] = `--ls-${Theme.camelToKebab(key)}`;
+        });
+        const logseqPropVals = await logseq.UI.resolveThemeCssPropsVals(
+            Object.values(mapToLogseqProps)
+        );
+        if (!logseqPropVals) {
+            return new Theme();
+        }
+        let props: { [key: string]: string } = {};
+        Object.keys(Theme.defaultProps).forEach((key) => {
+            props[key] = logseqPropVals[mapToLogseqProps[key]] ?? Theme.defaultProps[key as keyof typeof Theme.defaultProps];
+        });
+        return new Theme(props as typeof Theme.defaultProps);
+    }
+}

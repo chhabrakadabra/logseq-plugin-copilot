@@ -11,8 +11,8 @@
   },
   "logseq": {
     "id": "_8hs96bamw",
-    "title": "Logseq Copilot",
-    "icon": "./icon.svg"
+    "title": "Copilot",
+    "icon": "./src/assets/icon.svg"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
