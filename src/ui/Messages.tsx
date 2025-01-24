@@ -96,29 +96,48 @@ export const AISuggestion: React.FC<{ message: string, theme: Theme }> = ({ mess
 
 export const AIMessageBox: React.FC<{ message: AIMessage, theme: Theme }> = ({ message, theme }) => {
     const notesRegex = /<note>(.*?)<\/note>/gs;
-    const sections = [];
+    const sections: { type: "commentary" | "suggestion", message: string }[] = [];
     let lastIndex = 0;
     for (const match of message.msg.matchAll(notesRegex)) {
         // Add text before the note if it exists
         if (match.index! > lastIndex) {
             const textBefore = message.msg.slice(lastIndex, match.index).trim();
             if (textBefore) {
-                sections.push(<AICommentary message={textBefore} theme={theme} />);
+                sections.push({ type: "commentary", message: textBefore });
             }
         }
 
         // Add the note
-        sections.push(<AISuggestion message={match[1].trim()} theme={theme} />);
+        sections.push({ type: "suggestion", message: match[1].trim() });
 
         lastIndex = match.index! + match[0].length;
     }
     // Add remaining text after last note if it exists
     const remainingText = message.msg.slice(lastIndex).trim();
     if (remainingText) {
-        sections.push(<AICommentary message={remainingText} theme={theme} />);
+        sections.push({ type: "commentary", message: remainingText });
+    }
+    // If the final section contains a `<note>` tag, but not a corresponding `</note>` tag, it might
+    // just have not streamed yet. Pull it out into a separate note.
+    if (sections.length > 0) {
+        const finalSection = sections.pop()!;
+        if (finalSection.type === "commentary" && finalSection.message.includes("<note>")) {
+            const actualCommentary = finalSection.message.split("<note>")[0];
+            const partialSuggestion = finalSection.message.split("<note>")[1];
+            if (actualCommentary.length > 0) {
+                sections.push({ type: "commentary", message: actualCommentary });
+            }
+            if (partialSuggestion.length > 0) {
+                sections.push({ type: "suggestion", message: partialSuggestion });
+            }
+        } else {
+            sections.push(finalSection);
+        }
     }
 
-    return <>{sections}</>;
+    return <>{sections.map((section) => section.type === "commentary"
+        ? <AICommentary message={section.message} theme={theme} />
+        : <AISuggestion message={section.message} theme={theme} />)}</>;
 }
 
 export const Messages: React.FC<{
