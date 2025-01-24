@@ -30,6 +30,7 @@ export class RagEngine {
             },
             modelName: "gpt-4o-mini",
             maxTokens: 1000,
+            verbose: __DEV__,
         });
         const queryEnhancerTemplate = ChatPromptTemplate.fromMessages([
             ["system", dedent`
@@ -52,13 +53,33 @@ export class RagEngine {
         ]);
         const qaTemplate = ChatPromptTemplate.fromMessages([
             ["system", dedent`
-                You are a helpful assistant that can answer questions about the user's notes.
-                You may use markdown to format your response.
-
-                It is now: {now}.
+                You are a helpful assistant that can answer questions about the user's notes and
+                help the user create new notes.
 
                 The user's notes are:
                 {retrievedContext}
+
+                You may use markdown to format your response.
+
+                When you provide a suggested note that the user can include into their notes, you
+                should include it in a \`<note>\` tag. This is important because the contents
+                included in the \`<note>\` tag can be copied into the user's notes with a single
+                click. For example, if the user asks "Create a summary of my work with Ray", you
+                might respond with:
+
+                \`\`\`
+                Here's a summary of your work with Ray based on your notes:
+                <note>
+                ...
+                </note>
+                Feel free to let me know if you'd like to add or modify any specific sections!
+                \`\`\`
+
+                Aggressively find opportunities to help improve the user's notes by liberally using
+                the \`<note>\` tag. Assume the user will want to copy important parts of your
+                response into their notes.
+
+                It is now: {now}.
             `],
             ["placeholder", "{history}"],
             ["human", "{query}"],
