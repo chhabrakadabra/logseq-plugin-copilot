@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { AIMessage, HumanMessage, Message } from '../lib/chat';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { Theme } from '../lib/logseq';
+import { Theme, replaceCurrentBlock, insertChildBlock } from '../lib/logseq';
 import { Button } from '@headlessui/react';
 import { Square2StackIcon, BarsArrowDownIcon, CheckIcon } from '@heroicons/react/24/outline';
 import "@logseq/libs";
@@ -46,28 +46,35 @@ export const AICommentary: React.FC<{ message: string, theme: Theme }> = ({ mess
     );
 }
 
+const NoteAction: React.FC<{ onClick: () => void, label: string, icon: React.ReactNode, theme: Theme }> = ({ onClick, label, icon, theme }) => {
+    return (
+        <Button
+            className="rounded-md flex items-center gap-2 border-solid border-2 mt-4 p-1 ml-1"
+            style={{
+                backgroundColor: theme.props.tertiaryBackgroundColor,
+                borderColor: theme.props.borderColor,
+            }}
+            onClick={onClick}
+            aria-label={label}
+            title={label}
+        >
+            {icon}
+        </Button>
+    )
+}
+
 export const AISuggestion: React.FC<{ message: string, theme: Theme }> = ({ message, theme }) => {
     const replace = useCallback(async () => {
         if (!message) return;
-        const blockEntity = await logseq.Editor.getCurrentBlock()
-        if (blockEntity) {
-            await logseq.Editor.updateBlock(blockEntity.uuid, message);
-        } else {
-            logseq.UI.showMsg("Copilot: No block selected", "warning");
-        }
+        replaceCurrentBlock(message);
     }, [message]);
-
     const insert = useCallback(async () => {
         if (!message) return;
-        const blockEntity = await logseq.Editor.getCurrentBlock()
-        if (blockEntity) {
-            await logseq.Editor.insertBlock(blockEntity.uuid, message, {
-                before: false,
-                sibling: false
-            });
-        } else {
-            logseq.UI.showMsg("Copilot: No block selected", "warning");
-        }
+        insertChildBlock(message);
+    }, [message])
+    const copy = useCallback(async () => {
+        navigator.clipboard.writeText(message);
+        logseq.UI.showMsg("Copied to clipboard", "success");
     }, [message])
     return (
         <div
@@ -79,45 +86,9 @@ export const AISuggestion: React.FC<{ message: string, theme: Theme }> = ({ mess
                 dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(message) }}
             />
             <div className="flex justify-end">
-                <Button
-                    className="rounded-md flex items-center gap-2 border-solid border-2 mt-4 p-1 mr-1"
-                    style={{
-                        backgroundColor: theme.props.tertiaryBackgroundColor,
-                        borderColor: theme.props.borderColor,
-                    }}
-                    onClick={replace}
-                    aria-label="Replace current block"
-                    title="Replace current block"
-                >
-                    <CheckIcon className="size-4" />
-                </Button>
-                <Button
-                    className="rounded-md flex items-center gap-2 border-solid border-2 mt-4 p-1 mr-1"
-                    style={{
-                        backgroundColor: theme.props.tertiaryBackgroundColor,
-                        borderColor: theme.props.borderColor,
-                    }}
-                    onClick={insert}
-                    aria-label="Insert as sub-block"
-                    title="Insert as sub-block"
-                >
-                    <BarsArrowDownIcon className="size-4" />
-                </Button>
-                <Button
-                    className="rounded-md flex items-center gap-2 border-solid border-2 mt-4 p-1"
-                    style={{
-                        backgroundColor: theme.props.tertiaryBackgroundColor,
-                        borderColor: theme.props.borderColor,
-                    }}
-                    onClick={() => {
-                        logseq.UI.showMsg("Copied to clipboard", "success");
-                        navigator.clipboard.writeText(message);
-                    }}
-                    aria-label="Copy"
-                    title="Copy"
-                >
-                    <Square2StackIcon className="size-4" />
-                </Button>
+                <NoteAction onClick={replace} label="Replace current block" icon={<CheckIcon className="size-4" />} theme={theme} />
+                <NoteAction onClick={insert} label="Insert as sub-block" icon={<BarsArrowDownIcon className="size-4" />} theme={theme} />
+                <NoteAction onClick={copy} label="Copy" icon={<Square2StackIcon className="size-4" />} theme={theme} />
             </div>
         </div>
     );

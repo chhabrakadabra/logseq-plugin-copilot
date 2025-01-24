@@ -121,3 +121,24 @@ export class Theme {
         return new Theme(props as typeof Theme.defaultProps);
     }
 }
+
+export async function replaceCurrentBlock(content: string) {
+    const blockEntity = await logseq.Editor.getCurrentBlock()
+    if (blockEntity) {
+        await logseq.Editor.updateBlock(blockEntity.uuid, content);
+    } else {
+        logseq.UI.showMsg("Copilot: No block selected", "warning");
+    }
+}
+
+export async function insertChildBlock(content: string) {
+    const blockEntity = await logseq.Editor.getCurrentBlock()
+    if (blockEntity) {
+        await logseq.Editor.insertBlock(blockEntity.uuid, content, {
+            before: false,
+            sibling: false
+        });
+    } else {
+        logseq.UI.showMsg("Copilot: No block selected", "warning");
+    }
+}
