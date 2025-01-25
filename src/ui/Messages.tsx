@@ -145,18 +145,37 @@ export const Messages: React.FC<{
     theme: Theme;
 }> = ({ messages, theme }) => {
     return (
-        <div
-            style={{ color: theme.props.primaryTextColor }}
-            className="p-2 h-[50dvh] my-2 overflow-y-auto"
-        >
-            {messages.map((message) => (
-                <div key={message.id} className="mb-4">
-                    {message instanceof HumanMessage
-                        ? <HumanMessageBox message={message} theme={theme} />
-                        : <AIMessageBox message={message} theme={theme} />
+        <>
+            <style>
+                {`
+                .messages-container {
+                    scrollbar-width: thin;
+                    scrollbar-color: ${theme.props.borderColor} transparent;
+                    &::-webkit-scrollbar {
+                        width: 5px;
+                        height: 5px;
                     }
-                </div>
-            ))}
-        </div>
+                    &::-webkit-scrollbar-track {
+                        background: ${theme.props.secondaryBackgroundColor};
+                    }
+                    &::-webkit-scrollbar-thumb {
+                        background-color: ${theme.props.borderColor};
+                        border-radius: 6px;
+                    }
+                }
+                `}
+            </style>
+            <div
+                style={{ color: theme.props.primaryTextColor }}
+                className="p-2 h-[50dvh] my-2 overflow-y-auto messages-container"
+            >
+                {messages.map((message) => (
+                    message instanceof HumanMessage
+                        ? <HumanMessageBox message={message} theme={theme} key={message.id} />
+                        : <AIMessageBox message={message} theme={theme} key={message.id} />
+
+                ))}
+            </div>
+        </>
     );
 };
