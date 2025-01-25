@@ -135,9 +135,9 @@ export const AIMessageBox: React.FC<{ message: AIMessage, theme: Theme }> = ({ m
         }
     }
 
-    return <>{sections.map((section) => section.type === "commentary"
-        ? <AICommentary message={section.message} theme={theme} />
-        : <AISuggestion message={section.message} theme={theme} />)}</>;
+    return <>{sections.map((section, index) => section.type === "commentary"
+        ? <AICommentary message={section.message} theme={theme} key={index} />
+        : <AISuggestion message={section.message} theme={theme} key={index} />)}</>;
 }
 
 export const Messages: React.FC<{
