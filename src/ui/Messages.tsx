@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { AIMessage, HumanMessage, Message } from '../lib/chat';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
@@ -144,6 +144,12 @@ export const Messages: React.FC<{
     messages: Message[];
     theme: Theme;
 }> = ({ messages, theme }) => {
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        const messagesContainer = messagesContainerRef.current;
+        if (!messagesContainer) return;
+        messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: "smooth" });
+    }, [messages]);
     return (
         <>
             <style>
@@ -168,6 +174,7 @@ export const Messages: React.FC<{
             <div
                 style={{ color: theme.props.primaryTextColor }}
                 className="p-2 h-[50dvh] my-2 overflow-y-auto messages-container"
+                ref={messagesContainerRef}
             >
                 {messages.map((message) => (
                     message instanceof HumanMessage
