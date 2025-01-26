@@ -40,7 +40,7 @@ export const HumanMessageBox: React.FC<{ message: HumanMessage, theme: Theme }> 
     );
 }
 
-export const AICommentary: React.FC<{ message: string, theme: Theme }> = ({ message, theme }) => {
+export const AICommentary: React.FC<{ message: string }> = ({ message }) => {
     return (
         <div className="markdown-body mb-2" dangerouslySetInnerHTML={{ __html: parseIncompleteMarkdown(message) }} />
     );
@@ -136,7 +136,7 @@ export const AIMessageBox: React.FC<{ message: AIMessage, theme: Theme }> = ({ m
     }
 
     return <>{sections.map((section, index) => section.type === "commentary"
-        ? <AICommentary message={section.message} theme={theme} key={index} />
+        ? <AICommentary message={section.message} key={index} />
         : <AISuggestion message={section.message} theme={theme} key={index} />)}</>;
 }
 
