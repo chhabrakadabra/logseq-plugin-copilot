@@ -10,6 +10,9 @@ Logseq Copilot automatically indexes all your Logseq notes and includes relevant
 ChatGPT prompt. It doesn't matter which page you're currently on, this plugin will pull relevant
 information from the entire graph.
 
+Using a chat-like interface, you'll be able to discuss your notes with a Copilot and easily insert
+note suggestions into Logseq.
+
 ## Usage
 
 Be sure to add your OpenAI API key to the [settings](#settings) page. Without it, this plugin is not
