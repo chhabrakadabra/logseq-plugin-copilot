@@ -59,6 +59,9 @@ export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
         } finally {
             setIsProcessing(false);
             setQuery("");
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 1000);
         }
     }, [query]);
 
