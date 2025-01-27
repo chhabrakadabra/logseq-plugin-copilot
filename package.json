@@ -12,7 +12,7 @@
   "logseq": {
     "id": "_8hs96bamw",
     "title": "Copilot",
-    "icon": "./src/assets/icon.svg"
+    "icon": "icon.svg"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
