@@ -28,7 +28,7 @@ export class RagEngine {
                 baseURL: logseq.settings!["OPENAI_BASE_URL"] as string,
                 apiKey: logseq.settings!["OPENAI_API_KEY"] as string,
             },
-            modelName: "gpt-4o-mini",
+            modelName: logseq.settings!["OPENAI_MODEL"] as string,
             maxTokens: 1000,
             verbose: __DEV__,
         });
