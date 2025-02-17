@@ -8,7 +8,7 @@ Talk to AI about your Logseq notes.
 
 Logseq Copilot automatically indexes all your Logseq notes and includes relevant context in the
 ChatGPT prompt. It doesn't matter which page you're currently on, this plugin will pull relevant
-information from the entire graph.
+information from all of your notes.
 
 Using a chat-like interface, you'll be able to discuss your notes with a Copilot and easily insert
 note suggestions into Logseq.
@@ -37,6 +37,18 @@ Use `ctrl-P` to bring up the Copilot interface and type in a question about your
 
 Create an issue [here](https://github.com/chhabrakadabra/logseq-plugin-copilot/issues). Even better,
 create a pull request!
+
+## FAQ
+
+### Can this plugin work with locally hosted LLMs?
+
+Sure! As long as you can expose an OpenAI compatible API. For example, to work with
+[Ollama](https://ollama.com/), you'll need to change the `OpenAI Base URL` setting to
+`http://localhost:11434/v1`. You'll also need to
+[adjust](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-do-i-configure-ollama-server)
+the [OLLAMA_ORIGINS environment
+variable](https://github.com/ollama/ollama/blob/main/docs/faq.md#how-can-i-allow-additional-web-origins-to-access-ollama).
+You'll need to allow the origin `logseq.io` or just set it to a wildcard `*` if it's appropriate.
 
 ## License
 
