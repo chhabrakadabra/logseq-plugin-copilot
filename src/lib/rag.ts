@@ -11,6 +11,8 @@ import { BlockEntity, BlockUUIDTuple, PageEntity } from "@logseq/libs/dist/LSPlu
 import { HumanMessage, AIMessage, Message } from "./chat";
 import { HumanMessage as LangChainHumanMessage, AIMessage as LangChainAIMessage } from "@langchain/core/messages";
 
+const VECTOR_SIMILARITY_TOP_K = 20;
+
 export class RagEngine {
     qaChain!: Runnable;
     queryEnhancerChain!: Runnable;
@@ -109,8 +111,7 @@ export class RagEngine {
     }
 
     async retrieveVectorStoreBlocks(query: string): Promise<string[]> {
-        const topK = Number(logseq.settings!["VECTOR_SIMILARITY_TOP_K"]);
-        const results = await this.vectorStore.query(query, topK);
+        const results = await this.vectorStore.query(query, VECTOR_SIMILARITY_TOP_K);
         logger.log("Vector store results:", results);
         return results.map(result => result.id);
     }
