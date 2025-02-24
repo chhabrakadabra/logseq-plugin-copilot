@@ -53,7 +53,7 @@ export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
             if (error instanceof AuthenticationError) {
                 logseq.UI.showMsg("Copilot: Authentication failed. Please check your OpenAI API key in settings", "error");
             } else {
-                logseq.UI.showMsg("Copilot: Error running query", "error");
+                logseq.UI.showMsg(`Copilot: Error running query\n${error.message}`, "error");
             }
             console.error(e);
         } finally {
