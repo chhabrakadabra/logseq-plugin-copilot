@@ -9,7 +9,6 @@ import { Messages } from './Messages';
 import { Theme } from '../lib/logseq';
 
 
-
 export const App: React.FC<{ ragEngine: RagEngine }> = ({ ragEngine }) => {
     const [query, setQuery] = useState("");
     const [chatMessages, setChatMessages] = useState<Message[]>([]);

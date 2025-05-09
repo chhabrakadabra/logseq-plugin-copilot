@@ -96,6 +96,13 @@ export class Theme {
         } = Theme.defaultProps,
     ) { }
 
+    private static normalizeColor(color: string): string {
+        if (/^\d+\s\d+%\s\d+%$/.test(color)) {
+            return `hsl(${color})`;
+        }
+        return color;
+    }
+
     public static async fromLogseq(): Promise<Theme> {
         let mapToLogseqProps: { [key: string]: string } = {};
         Object.keys(Theme.defaultProps).forEach((key) => {
@@ -109,7 +116,8 @@ export class Theme {
         }
         let props: { [key: string]: string } = {};
         Object.keys(Theme.defaultProps).forEach((key) => {
-            props[key] = logseqPropVals[mapToLogseqProps[key]] ?? Theme.defaultProps[key as keyof typeof Theme.defaultProps];
+            const color = logseqPropVals[mapToLogseqProps[key]] ?? Theme.defaultProps[key as keyof typeof Theme.defaultProps];
+            props[key] = this.normalizeColor(color);
         });
         return new Theme(props as typeof Theme.defaultProps);
     }
